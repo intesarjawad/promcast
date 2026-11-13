@@ -93,15 +93,50 @@ code {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 8px 18px;
+	margin-left: auto;
 }
-.bar nav a {
+.bar nav a,
+.bar .repo {
 	text-decoration: none;
 	padding-bottom: 2px;
 	border-bottom: 1.5px solid transparent;
 	transition: border-color 160ms var(--out);
 }
-.bar nav a:hover {
+.bar nav a:hover,
+.bar .repo:hover {
 	border-color: currentColor;
+}
+.bar .repo {
+	min-width: 24px;
+	min-height: 24px;
+	text-align: center;
+	margin-left: 2px;
+}
+.bar .repo svg {
+	vertical-align: -0.125em;
+	margin-right: 0.4em;
+}
+@media (max-width: 559px) {
+	.bar {
+		flex-wrap: wrap;
+	}
+	.mark {
+		flex: 1;
+	}
+	.bar .repo {
+		order: 2;
+	}
+	.bar nav {
+		order: 3;
+		flex-basis: 100%;
+		margin-left: 0;
+	}
+	.bar .repo span {
+		display: none;
+	}
+	.bar .repo svg {
+		margin-right: 0;
+	}
 }
 
 /* ---------- the sheet: masthead, timetable, arrivals ---------- */
