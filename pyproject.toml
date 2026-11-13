@@ -7,7 +7,7 @@ license = "Apache-2.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "toto-models==1.0.0", "torch==2.15.0", "numpy==2.5.4", "augurs==0.10.3",
-  "httpx==0.28.1", "prometheus-client==0.26.0", "fastapi==0.162.3",
+  "httpx==0.28.1", "prometheus-client==0.26.0", "fastapi==0.162.4",
   "uvicorn==0.54.0", "pydantic==2.14.3", "pyyaml==6.0.3", "pyarrow==26.0.1", "rich==15.0.0",
 ]
 
