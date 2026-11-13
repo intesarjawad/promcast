@@ -1,0 +1,7 @@
+{
+  "status": "success",
+  "data": [
+    "prometheus_tsdb_storage_blocks_bytes",
+    "prometheus_tsdb_retention_limit_bytes"
+  ]
+}

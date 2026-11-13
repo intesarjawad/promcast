@@ -1,0 +1,2 @@
+error: no Prometheus found; tried http://localhost:9090, http://prometheus:9090
+next:  promcast scan http://localhost:9090

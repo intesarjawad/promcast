@@ -1,0 +1,7 @@
+{
+  "status": "success",
+  "data": [
+    "kubelet_volume_stats_available_bytes",
+    "kubelet_volume_stats_capacity_bytes"
+  ]
+}

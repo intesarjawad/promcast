@@ -1,0 +1,14 @@
+   PROMCAST   localhost:9090 · toto-2.0-22m · 22:13 UTC
+
+  First to fill  host-000 /data  in 1h 30m
+
+                            now       30m       1h      1h 30m     2h
+                             ┼┈┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┼┈┈┈
+  host-000 /data             ████◆█████████████████████████✕───────────  1h 30m
+
+  70 more series not forecast; rerun with --max-series 120
+
+  ███ Promcast lead time   ✕ threshold reached   ◆ predict_linear
+
+  next promcast init http://localhost:9090
+  next promcast replay --auto (ETA up to 10 min for 30d)

@@ -1,0 +1,13 @@
+   PROMCAST   localhost:9090 · toto-2.0-22m · 22:13 UTC
+
+  Warming up
+
+                              now             1h              2h              3h              4h              5h              6h
+                               ┼┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┼
+  host-000                     ░░░░░░░░░  warming up, 3m to first forecast
+  host-001                     ░░░░░░░░░  warming up
+
+  ███ Promcast lead time   ✕ threshold reached   ◆ predict_linear
+
+  next promcast init http://localhost:9090
+  next promcast replay --auto (ETA up to 10 min for 30d)

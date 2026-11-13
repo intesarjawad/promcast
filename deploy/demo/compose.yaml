@@ -1,0 +1,383 @@
+services:
+  history:
+    image: python:3.12-slim
+    volumes:
+    - work:/work
+    configs:
+    - source: inline-file-1
+      target: /demo/scenario.py
+    command:
+    - python
+    - /demo/scenario.py
+    - --backfill
+    - --hours
+    - '72'
+    - --out
+    - /work/history.om
+  backfill:
+    image: prom/prometheus:v3.15.1
+    volumes:
+    - work:/work:ro
+    - prometheus-data:/prometheus
+    entrypoint: /bin/sh
+    command:
+    - -ec
+    - "if [ -f /prometheus/.backfill-started ]; then\n  echo 'Backfill was interrupted; restore the demo\
+      \ volumes before retrying.' >&2\n  exit 1\nfi\nif [ -f /prometheus/.backfill-complete ] || [ -d\
+      \ /prometheus/wal ]; then exit 0; fi\nif find /prometheus -mindepth 1 -maxdepth 1 | grep -q .; then\n\
+      \  echo 'Unmarked TSDB data; restore the original demo volumes before retrying.' >&2\n  exit 1\n\
+      fi\ntouch /prometheus/.backfill-started\npromtool tsdb create-blocks-from openmetrics /work/history.om\
+      \ /prometheus\nmv /prometheus/.backfill-started /prometheus/.backfill-complete\n"
+    depends_on:
+      history:
+        condition: service_completed_successfully
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    volumes:
+    - prometheus-data:/prometheus
+    configs:
+    - source: prometheus
+      target: /etc/prometheus/prometheus.yml
+    - source: inline-file-2
+      target: /etc/prometheus/demo/promcast.rules.yml
+    - source: inline-file-3
+      target: /etc/prometheus/demo/demo.rules.yml
+    command:
+    - --config.file=/etc/prometheus/prometheus.yml
+    - --storage.tsdb.path=/prometheus
+    - --storage.tsdb.retention.time=7d
+    depends_on:
+      backfill:
+        condition: service_completed_successfully
+    ports:
+    - 127.0.0.1:9090:9090
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - -q
+      - -O
+      - /dev/null
+      - http://localhost:9090/-/ready
+      interval: 5s
+      timeout: 2s
+      retries: 24
+  alertmanager:
+    image: prom/alertmanager:v0.34.2
+    configs:
+    - source: alertmanager
+      target: /etc/alertmanager/alertmanager.yml
+    command:
+    - --config.file=/etc/alertmanager/alertmanager.yml
+    - --storage.path=/alertmanager
+    ports:
+    - 127.0.0.1:9093:9093
+  scenario:
+    image: python:3.12-slim
+    volumes:
+    - work:/work:ro
+    configs:
+    - source: inline-file-1
+      target: /demo/scenario.py
+    command:
+    - python
+    - /demo/scenario.py
+    - --serve
+    - --anchor-file
+    - /work/anchor
+    depends_on:
+      history:
+        condition: service_completed_successfully
+  promcast:
+    image: ghcr.io/intesarjawad/promcast:0.1.0
+    volumes: []
+    configs:
+    - source: inline-file-4
+      target: /etc/promcast.yaml
+    command:
+    - serve
+    - --config
+    - /etc/promcast.yaml
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    ports:
+    - 127.0.0.1:8787:8787
+  grafana:
+    image: grafana/grafana:13.3.0
+    volumes: []
+    configs:
+    - source: inline-file-5
+      target: /etc/grafana/provisioning/datasources/promcast.yml
+    - source: inline-file-6
+      target: /etc/grafana/provisioning/dashboards/promcast.yml
+    - source: inline-file-7
+      target: /var/lib/grafana/dashboards/promcast.json
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: 'true'
+      GF_ANALYTICS_REPORTING_ENABLED: 'false'
+      GF_ANALYTICS_CHECK_FOR_UPDATES: 'false'
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: 'false'
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/promcast.json
+    ports:
+    - 127.0.0.1:3000:3000
+configs:
+  prometheus:
+    content: "global:\n  scrape_interval: 5s\n  evaluation_interval: 15s\nrule_files:\n  - /etc/prometheus/demo/promcast.rules.yml\n\
+      \  - /etc/prometheus/demo/demo.rules.yml\nalerting:\n  alertmanagers:\n    - static_configs:\n \
+      \       - targets: ['alertmanager:9093']\nscrape_configs:\n  - job_name: scenario\n    static_configs:\n\
+      \      - targets: ['scenario:9100']\n  - job_name: promcast\n    static_configs:\n      - targets:\
+      \ ['promcast:8787']\n  - job_name: prometheus\n    static_configs:\n      - targets: ['localhost:9090']\n"
+  alertmanager:
+    content: "route:\n  receiver: demo\n  group_by: [alertname]\n  group_wait: 0s\n  group_interval: 15s\n\
+      \  repeat_interval: 1h\nreceivers:\n  - name: demo\n"
+  inline-file-1:
+    content: "\"\"\"Synthetic disk history and live metrics, using only the standard library.\"\"\"\n\n\
+      import argparse\nimport math\nimport time\nfrom collections.abc import Callable\nfrom http.server\
+      \ import BaseHTTPRequestHandler, ThreadingHTTPServer\nfrom pathlib import Path\nfrom typing import\
+      \ TextIO\n\nMINUTE_S = 60\nDAY_S = 24 * 60 * MINUTE_S\nCAPACITY_BYTES = 500_000_000_000\nBASE_FREE_BYTES\
+      \ = 400_000_000_000\nSEASON_BYTES = 20_000_000_000\nDRIFT_BYTES_PER_DAY = 1_000_000_000\nCYCLE_S\
+      \ = 3 * 60 * MINUTE_S\nLEAK_LEAD_S = 25 * MINUTE_S\nFULL_AFTER_S = 65 * MINUTE_S\nCLEANUP_AFTER_S\
+      \ = FULL_AFTER_S + 10 * MINUTE_S\n# Make acceleration visible at the anchor, inside the one-hour\
+      \ forecast warning.\nLOGISTIC_MIDPOINT_S = 40 * MINUTE_S\nLOGISTIC_SCALE_S = 10 * MINUTE_S\nFILESYSTEM_LABELS\
+      \ = '{mountpoint=\"/demo\",fstype=\"ext4\",device=\"demo\"}'\nSCRAPE_LABELS = 'instance=\"scenario:9100\"\
+      ,job=\"scenario\"'\nMETRICS = (\n    \"demo_disk_free_bytes\",\n    \"node_filesystem_avail_bytes\"\
+      ,\n    \"node_filesystem_size_bytes\",\n)\n\n\ndef no_leak_bytes(t: float, anchor_ts: float) ->\
+      \ float:\n    \"\"\"Return free bytes with daily seasonality and a slow downward drift.\"\"\"\n\
+      \    elapsed_s = t - anchor_ts\n    baseline = (\n        BASE_FREE_BYTES\n        + SEASON_BYTES\
+      \ * math.sin(2 * math.pi * elapsed_s / DAY_S)\n        - DRIFT_BYTES_PER_DAY * elapsed_s / DAY_S\n\
+      \    )\n    return min(CAPACITY_BYTES, max(0.0, baseline))\n\n\ndef disk_free_bytes(t: float, anchor_ts:\
+      \ float) -> float:\n    \"\"\"Return a repeating logistic leak, full-disk hold and cleanup.\"\"\"\
+      \n    baseline = no_leak_bytes(t, anchor_ts)\n    elapsed_s = t - (anchor_ts - LEAK_LEAD_S)\n  \
+      \  if elapsed_s < 0:\n        return baseline\n    phase_s = elapsed_s % CYCLE_S\n    if phase_s\
+      \ >= CLEANUP_AFTER_S:\n        return baseline\n    if phase_s >= FULL_AFTER_S:\n        return\
+      \ 0.0\n\n    def logistic(age_s: float) -> float:\n        return 1 / (1 + math.exp(-(age_s - LOGISTIC_MIDPOINT_S)\
+      \ / LOGISTIC_SCALE_S))\n\n    # Normalize the endpoints so the leak starts continuously and fills\
+      \ at 65 min.\n    progress = (logistic(phase_s) - logistic(0)) / (logistic(FULL_AFTER_S) - logistic(0))\n\
+      \    return baseline * (1 - progress)\n\n\ndef metric_sample(name: str, value: float, timestamp:\
+      \ float | None = None) -> str:\n    \"\"\"Render samples; timestamped history includes labels added\
+      \ by live scrapes.\"\"\"\n    labels = [] if name == METRICS[0] else [FILESYSTEM_LABELS[1:-1]]\n\
+      \    if timestamp is not None:\n        labels.append(SCRAPE_LABELS)\n    label_set = \"{\" + \"\
+      ,\".join(labels) + \"}\" if labels else \"\"\n    suffix = \"\" if timestamp is None else f\" {timestamp:.6f}\"\
+      \n    return f\"{name}{label_set} {value:.17g}{suffix}\\n\"\n\n\ndef write_history(stream: TextIO,\
+      \ anchor_ts: float, hours: int) -> None:\n    \"\"\"Write minute samples through the anchor, grouped\
+      \ by metric family.\"\"\"\n    if hours <= 0:\n        raise ValueError(\"hours must be a positive\
+      \ integer\")\n    for name in METRICS:\n        stream.write(f\"# TYPE {name} gauge\\n\")\n    \
+      \    for offset in range(-hours * 60, 1):\n            timestamp = anchor_ts + offset * MINUTE_S\n\
+      \            value = (\n                float(CAPACITY_BYTES)\n                if name == METRICS[2]\n\
+      \                else disk_free_bytes(timestamp, anchor_ts)\n            )\n            stream.write(metric_sample(name,\
+      \ value, timestamp))\n    stream.write(\"# EOF\\n\")\n\n\ndef backfill(out: Path, anchor_file: Path,\
+      \ hours: int, anchor_ts: float) -> None:\n    \"\"\"Persist the shared anchor and its matching OpenMetrics\
+      \ history.\"\"\"\n    if hours <= 0 or not math.isfinite(anchor_ts):\n        raise ValueError(\"\
+      hours must be positive and anchor must be finite\")\n    if out.exists() and anchor_file.exists():\n\
+      \        try:\n            valid_anchor = math.isfinite(float(anchor_file.read_text(encoding=\"\
+      utf-8\")))\n        except ValueError:\n            valid_anchor = False\n        if valid_anchor\
+      \ and out.read_bytes().endswith(b\"# EOF\\n\"):\n            return\n    if out.exists() or anchor_file.exists():\n\
+      \        raise ValueError(\"incomplete demo history; restore both history and anchor\")\n    out.parent.mkdir(parents=True,\
+      \ exist_ok=True)\n    anchor_file.parent.mkdir(parents=True, exist_ok=True)\n    with out.open(\"\
+      w\", encoding=\"utf-8\", newline=\"\\n\") as stream:\n        write_history(stream, anchor_ts, hours)\n\
+      \    temporary_anchor = anchor_file.with_name(anchor_file.name + \".tmp\")\n    temporary_anchor.write_text(repr(anchor_ts)\
+      \ + \"\\n\", encoding=\"utf-8\")\n    temporary_anchor.replace(anchor_file)\n\n\ndef metrics(t:\
+      \ float, anchor_ts: float) -> bytes:\n    \"\"\"Render both free-space forms from one live sample.\"\
+      \"\"\n    free = disk_free_bytes(t, anchor_ts)\n    lines: list[str] = []\n    for name, value in\
+      \ zip(METRICS, (free, free, float(CAPACITY_BYTES)), strict=True):\n        lines.append(f\"# TYPE\
+      \ {name} gauge\\n\")\n        lines.append(metric_sample(name, value))\n    return (\"\".join(lines)\
+      \ + \"# EOF\\n\").encode(\"utf-8\")\n\n\ndef create_server(\n    address: tuple[str, int], anchor_ts:\
+      \ float, clock: Callable[[], float] = time.time\n) -> ThreadingHTTPServer:\n    \"\"\"Create an\
+      \ exporter with an injectable clock and listen address.\"\"\"\n    if not math.isfinite(anchor_ts):\n\
+      \        raise ValueError(\"anchor must be finite\")\n\n    class MetricsHandler(BaseHTTPRequestHandler):\n\
+      \        def do_GET(self) -> None:\n            if self.path != \"/metrics\":\n                self.send_error(404)\n\
+      \                return\n            payload = metrics(clock(), anchor_ts)\n            self.send_response(200)\n\
+      \            self.send_header(\n                \"Content-Type\", \"application/openmetrics-text;\
+      \ version=1.0.0; charset=utf-8\"\n            )\n            self.send_header(\"Content-Length\"\
+      , str(len(payload)))\n            self.end_headers()\n            self.wfile.write(payload)\n\n\
+      \    return ThreadingHTTPServer(address, MetricsHandler)\n\n\ndef main() -> None:\n    \"\"\"Backfill\
+      \ history or serve the same anchored scenario on port 9100.\"\"\"\n    parser = argparse.ArgumentParser(description=__doc__)\n\
+      \    modes = parser.add_mutually_exclusive_group(required=True)\n    modes.add_argument(\"--backfill\"\
+      , action=\"store_true\")\n    modes.add_argument(\"--serve\", action=\"store_true\")\n    parser.add_argument(\"\
+      --hours\", type=int, default=72)\n    parser.add_argument(\"--out\", type=Path, default=Path(\"\
+      /work/history.om\"))\n    parser.add_argument(\"--anchor-file\", type=Path, default=Path(\"/work/anchor\"\
+      ))\n    args = parser.parse_args()\n    if args.hours <= 0:\n        parser.error(\"--hours must\
+      \ be a positive integer\")\n    if args.backfill:\n        backfill(args.out, args.anchor_file,\
+      \ args.hours, time.time())\n    else:\n        anchor_ts = float(args.anchor_file.read_text(encoding=\"\
+      utf-8\").strip())\n        with create_server((\"\", 9100), anchor_ts) as server:\n            try:\n\
+      \                server.serve_forever()\n            except KeyboardInterrupt:\n               \
+      \ server.server_close()\n\n\nif __name__ == \"__main__\":\n    main()\n"
+  inline-file-2:
+    content: "groups:\n- name: promcast\n  rules:\n  - alert: PromcastBreachSoon\n    expr: (promcast_breach_timestamp_seconds{target=\"\
+      demo_disk_free\",method=\"toto\"} - time()) / 60 < 60\n    for: 2m\n    labels:\n      severity:\
+      \ warning\n    annotations:\n      summary: '{{ $$labels.target }} forecast to breach in {{ $$value\
+      \ | printf \"%.0f\" }} min'\n      lead_minutes: '{{ $$value | printf \"%.0f\" }}'\n      forecast_origin:\
+      \ '{{ with printf \"promcast_forecast_origin_timestamp_seconds{target=%q}\" $$labels.target | query\
+      \ }}{{ . | first | value | humanizeTimestamp }}{{ end }}'\n      model: toto-2.0-22m\n  - alert:\
+      \ PromcastForecastStale\n    expr: time() - promcast_last_success_timestamp_seconds{target=\"demo_disk_free\"\
+      } > 180\n    for: 1m\n    labels:\n      severity: info\n"
+  inline-file-3:
+    content: "groups:\n  - name: demo\n    rules:\n      - alert: DemoDiskFull\n        expr: demo_disk_free_bytes\
+      \ <= 0\n        labels:\n          severity: critical\n        annotations:\n          summary:\
+      \ Synthetic demo disk is full\n      - alert: DemoLinearBreachSoon\n        expr: predict_linear(demo_disk_free_bytes[1h],\
+      \ 3600) < 0\n        for: 2m\n        labels:\n          severity: warning\n        annotations:\n\
+      \          summary: Synthetic demo disk forecast to fill within one hour by predict_linear\n"
+  inline-file-4:
+    content: "tsdb:\n  url: http://prometheus:9090\nmodel:\n  name: toto-2.0-22m\n  batch_size: 16\n \
+      \ cache_dir: /opt/promcast/models\nserver:\n  listen: 0.0.0.0:8787\ncycle: 1m\ntargets:\n  - name:\
+      \ demo_disk_free\n    query: demo_disk_free_bytes\n    step: 1m\n    context: 1d\n    horizon: 2h\n\
+      \    season: 1d\n    direction: below\n    threshold: 0\n    quantile: 0.9\n    warn: 1h\n    method:\
+      \ toto\n    linear_window: 1h\n    max_series: 50\n"
+  inline-file-5:
+    content: "apiVersion: 1\ndatasources:\n  - name: Prometheus\n    uid: prometheus\n    type: prometheus\n\
+      \    access: proxy\n    url: http://prometheus:9090\n    isDefault: true\n    jsonData:\n      timeInterval:\
+      \ 5s\n  - name: Promcast\n    uid: promcast\n    type: prometheus\n    access: proxy\n    url: http://promcast:8787\n\
+      \    jsonData:\n      timeInterval: 1m\n"
+  inline-file-6:
+    content: "apiVersion: 1\nproviders:\n  - name: demo\n    type: file\n    options:\n      path: /var/lib/grafana/dashboards\n"
+  inline-file-7:
+    content: "{\n  \"uid\": \"promcast-demo\",\n  \"title\": \"Synthetic disk forecast\",\n  \"tags\"\
+      : [\"promcast\"],\n  \"timezone\": \"browser\",\n  \"schemaVersion\": 39,\n  \"version\": 2,\n \
+      \ \"refresh\": \"30s\",\n  \"time\": {\"from\": \"now-6h\", \"to\": \"now+2h\"},\n  \"panels\":\
+      \ [\n    {\n      \"id\": 1,\n      \"type\": \"timeseries\",\n      \"title\": \"Synthetic free\
+      \ disk space and forecasts\",\n      \"description\": \"Observed free space, which stops at its\
+      \ newest sample instead of running flat into the forecast hours, the model's q10 to q90 forecast\
+      \ band with its q50 line, and the full-disk threshold. The band is the model's own uncertainty,\
+      \ drawn as returned; only the axis is clipped to 0 to 500 GB.\",\n      \"gridPos\": {\"x\": 0,\
+      \ \"y\": 0, \"w\": 16, \"h\": 10},\n      \"datasource\": {\"type\": \"datasource\", \"uid\": \"\
+      -- Mixed --\"},\n      \"fieldConfig\": {\n        \"defaults\": {\n          \"unit\": \"bytes\"\
+      ,\n          \"min\": 0, \"max\": 500000000000,\n          \"custom\": {\"lineWidth\": 2, \"fillOpacity\"\
+      : 0, \"showPoints\": \"never\", \"spanNulls\": false}\n        },\n        \"overrides\": [\n  \
+      \        {\"matcher\": {\"id\": \"byName\", \"options\": \"Actual\"},\n           \"properties\"\
+      : [{\"id\": \"color\", \"value\": {\"mode\": \"fixed\", \"fixedColor\": \"#EDEDE6\"}}]},\n     \
+      \     {\"matcher\": {\"id\": \"byName\", \"options\": \"q10\"},\n           \"properties\": [\n\
+      \             {\"id\": \"color\", \"value\": {\"mode\": \"fixed\", \"fixedColor\": \"#D7FF2F\"}},\n\
+      \             {\"id\": \"custom.lineWidth\", \"value\": 0}\n           ]},\n          {\"matcher\"\
+      : {\"id\": \"byName\", \"options\": \"q50\"},\n           \"properties\": [\n             {\"id\"\
+      : \"color\", \"value\": {\"mode\": \"fixed\", \"fixedColor\": \"#F3FFB8\"}},\n             {\"id\"\
+      : \"custom.lineWidth\", \"value\": 1},\n             {\"id\": \"custom.lineStyle\", \"value\": {\"\
+      fill\": \"dash\", \"dash\": [6, 4]}}\n           ]},\n          {\"matcher\": {\"id\": \"byName\"\
+      , \"options\": \"q90\"},\n           \"properties\": [\n             {\"id\": \"color\", \"value\"\
+      : {\"mode\": \"fixed\", \"fixedColor\": \"#D7FF2F\"}},\n             {\"id\": \"custom.lineWidth\"\
+      , \"value\": 0},\n             {\"id\": \"custom.fillOpacity\", \"value\": 28},\n             {\"\
+      id\": \"custom.fillBelowTo\", \"value\": \"q10\"},\n             {\"id\": \"custom.hideFrom\", \"\
+      value\": {\"legend\": true, \"tooltip\": false, \"viz\": false}}\n           ]},\n          {\"\
+      matcher\": {\"id\": \"byName\", \"options\": \"Full disk threshold\"},\n           \"properties\"\
+      : [\n             {\"id\": \"custom.lineStyle\", \"value\": {\"fill\": \"dash\", \"dash\": [10,\
+      \ 10]}},\n             {\"id\": \"color\", \"value\": {\"mode\": \"fixed\", \"fixedColor\": \"#FF4A3D\"\
+      }}\n           ]}\n        ]\n      },\n      \"options\": {\n        \"legend\": {\"displayMode\"\
+      : \"list\", \"placement\": \"bottom\", \"showLegend\": true},\n        \"tooltip\": {\"mode\": \"\
+      multi\", \"sort\": \"none\"}\n      },\n      \"targets\": [\n        {\"refId\": \"A\", \"expr\"\
+      : \"demo_disk_free_bytes unless on() (time() - timestamp(demo_disk_free_bytes) > 75)\", \"legendFormat\"\
+      : \"Actual\",\n         \"datasource\": {\"type\": \"prometheus\", \"uid\": \"prometheus\"}},\n\
+      \        {\"refId\": \"B\", \"expr\": \"promcast_forecast_q10{target=\\\"demo_disk_free\\\"}\",\n\
+      \         \"legendFormat\": \"q10\", \"datasource\": {\"type\": \"prometheus\", \"uid\": \"promcast\"\
+      }},\n        {\"refId\": \"C\", \"expr\": \"promcast_forecast_q50{target=\\\"demo_disk_free\\\"\
+      }\",\n         \"legendFormat\": \"q50\", \"datasource\": {\"type\": \"prometheus\", \"uid\": \"\
+      promcast\"}},\n        {\"refId\": \"D\", \"expr\": \"promcast_forecast_q90{target=\\\"demo_disk_free\\\
+      \"}\",\n         \"legendFormat\": \"q90\", \"datasource\": {\"type\": \"prometheus\", \"uid\":\
+      \ \"promcast\"}},\n        {\"refId\": \"E\", \"expr\": \"vector(0)\", \"legendFormat\": \"Full\
+      \ disk threshold\",\n         \"datasource\": {\"type\": \"prometheus\", \"uid\": \"prometheus\"\
+      }}\n      ]\n    },\n    {\n      \"id\": 2,\n      \"type\": \"stat\",\n      \"title\": \"Breach\
+      \ in\",\n      \"description\": \"Minutes until the forecast first crosses the threshold, from Promcast\
+      \ and from Prometheus's linear extrapolation, in one unit so the two compare at a glance.\",\n \
+      \     \"gridPos\": {\"x\": 16, \"y\": 0, \"w\": 8, \"h\": 10},\n      \"datasource\": {\"type\"\
+      : \"prometheus\", \"uid\": \"prometheus\"},\n      \"timeFrom\": \"5m\",\n      \"hideTimeOverride\"\
+      : true,\n      \"fieldConfig\": {\n        \"defaults\": {\n          \"unit\": \"suffix: min\"\
+      ,\n          \"decimals\": 1,\n          \"noValue\": \"unavailable\",\n          \"color\": {\"\
+      mode\": \"fixed\", \"fixedColor\": \"#9A9DA3\"},\n          \"mappings\": [\n            {\"type\"\
+      : \"value\", \"options\": {\"-1\": {\"text\": \"no breach forecast\", \"index\": 0}}},\n       \
+      \     {\"type\": \"special\", \"options\": {\"match\": \"null\",\n             \"result\": {\"text\"\
+      : \"unavailable\", \"index\": 1}}}\n          ]\n        },\n        \"overrides\": [\n        \
+      \  {\"matcher\": {\"id\": \"byFrameRefID\", \"options\": \"A\"},\n           \"properties\": [{\"\
+      id\": \"color\", \"value\": {\"mode\": \"fixed\", \"fixedColor\": \"#D7FF2F\"}}]},\n          {\"\
+      matcher\": {\"id\": \"byFrameRefID\", \"options\": \"B\"},\n           \"properties\": [{\"id\"\
+      : \"color\", \"value\": {\"mode\": \"fixed\", \"fixedColor\": \"#9A9DA3\"}}]}\n        ]\n     \
+      \ },\n      \"options\": {\n        \"reduceOptions\": {\"values\": false, \"calcs\": [\"lastNotNull\"\
+      ], \"fields\": \"\"},\n        \"textMode\": \"value_and_name\",\n        \"colorMode\": \"value\"\
+      ,\n        \"text\": {\"valueSize\": 28, \"titleSize\": 14},\n        \"graphMode\": \"none\",\n\
+      \        \"orientation\": \"vertical\"\n      },\n      \"targets\": [\n        {\"refId\": \"A\"\
+      , \"instant\": true, \"range\": false,\n         \"expr\": \"clamp_min((promcast_breach_timestamp_seconds{target=\\\
+      \"demo_disk_free\\\",method=\\\"toto\\\"} - time()) / 60, 0) or on() (vector(-1) and on() (time()\
+      \ - promcast_last_success_timestamp_seconds{target=\\\"demo_disk_free\\\"} <= 180) and on() (up{job=\\\
+      \"promcast\\\"} == 1))\",\n         \"legendFormat\": \"Promcast\", \"datasource\": {\"type\": \"\
+      prometheus\", \"uid\": \"prometheus\"}},\n        {\"refId\": \"B\", \"instant\": true, \"range\"\
+      : false,\n         \"expr\": \"clamp_min((promcast_breach_timestamp_seconds{target=\\\"demo_disk_free\\\
+      \",method=\\\"linear\\\"} - time()) / 60, 0) or on() (vector(-1) and on() (time() - promcast_last_success_timestamp_seconds{target=\\\
+      \"demo_disk_free\\\"} <= 180) and on() (up{job=\\\"promcast\\\"} == 1))\",\n         \"legendFormat\"\
+      : \"predict_linear[1h]\", \"datasource\": {\"type\": \"prometheus\", \"uid\": \"prometheus\"}}\n\
+      \      ]\n    },\n    {\n      \"id\": 3,\n      \"type\": \"stat\",\n      \"title\": \"Forecast\
+      \ state\",\n      \"description\": \"Says in words whether the forecast is warming up, stale, already\
+      \ past the threshold, or current.\",\n      \"gridPos\": {\"x\": 0, \"y\": 10, \"w\": 24, \"h\"\
+      : 3},\n      \"datasource\": {\"type\": \"prometheus\", \"uid\": \"prometheus\"},\n      \"timeFrom\"\
+      : \"5m\",\n      \"hideTimeOverride\": true,\n      \"fieldConfig\": {\n        \"defaults\": {\"\
+      noValue\": \"unavailable\", \"mappings\": []},\n        \"overrides\": [\n          {\"matcher\"\
+      : {\"id\": \"byFrameRefID\", \"options\": \"A\"},\n           \"properties\": [{\"id\": \"mappings\"\
+      , \"value\": [\n             {\"type\": \"value\", \"options\": {\"1\": {\"text\": \" \", \"index\"\
+      : 0}}}]}]},\n          {\"matcher\": {\"id\": \"byFrameRefID\", \"options\": \"B\"},\n         \
+      \  \"properties\": [{\"id\": \"unit\", \"value\": \"dateTimeAsLocal\"}]},\n          {\"matcher\"\
+      : {\"id\": \"byFrameRefID\", \"options\": \"D\"},\n           \"properties\": [{\"id\": \"mappings\"\
+      , \"value\": [\n             {\"type\": \"value\", \"options\": {\"1\": {\"text\": \" \", \"index\"\
+      : 0}}}]}]},\n          {\"matcher\": {\"id\": \"byFrameRefID\", \"options\": \"C\"},\n         \
+      \  \"properties\": [{\"id\": \"mappings\", \"value\": [\n             {\"type\": \"value\", \"options\"\
+      : {\"1\": {\"text\": \" \", \"index\": 0}}}]}]}\n        ]\n      },\n      \"options\": {\n   \
+      \     \"reduceOptions\": {\"values\": false, \"calcs\": [\"lastNotNull\"], \"fields\": \"\"},\n\
+      \        \"textMode\": \"value_and_name\",\n        \"colorMode\": \"none\",\n        \"text\":\
+      \ {\"valueSize\": 28, \"titleSize\": 14},\n        \"graphMode\": \"none\",\n        \"orientation\"\
+      : \"vertical\"\n      },\n      \"targets\": [\n        {\"refId\": \"A\", \"instant\": true, \"\
+      range\": false,\n         \"expr\": \"vector(1) unless on() promcast_last_success_timestamp_seconds{target=\\\
+      \"demo_disk_free\\\"}\",\n         \"legendFormat\": \"warming up: first forecast within one cycle\"\
+      ,\n         \"datasource\": {\"type\": \"prometheus\", \"uid\": \"prometheus\"}},\n        {\"refId\"\
+      : \"B\", \"instant\": true, \"range\": false,\n         \"expr\": \"promcast_last_success_timestamp_seconds{target=\\\
+      \"demo_disk_free\\\"} * 1000 and on() (time() - promcast_last_success_timestamp_seconds{target=\\\
+      \"demo_disk_free\\\"} > 180)\",\n         \"legendFormat\": \"stale since\", \"datasource\": {\"\
+      type\": \"prometheus\", \"uid\": \"prometheus\"}},\n        {\"refId\": \"D\", \"instant\": true,\
+      \ \"range\": false,\n         \"expr\": \"vector(1) and on() (time() - promcast_last_success_timestamp_seconds{target=\\\
+      \"demo_disk_free\\\"} <= 180) and on() (demo_disk_free_bytes > 0) and on() (up{job=\\\"promcast\\\
+      \"} == 1)\",\n         \"legendFormat\": \"forecast current\",\n         \"datasource\": {\"type\"\
+      : \"prometheus\", \"uid\": \"prometheus\"}},\n        {\"refId\": \"C\", \"instant\": true, \"range\"\
+      : false,\n         \"expr\": \"vector(1) and on() (demo_disk_free_bytes <= 0)\",\n         \"legendFormat\"\
+      : \"already past threshold\",\n         \"datasource\": {\"type\": \"prometheus\", \"uid\": \"prometheus\"\
+      }}\n      ]\n    },\n    {\n      \"id\": 4,\n      \"type\": \"row\",\n      \"title\": \"Trust\"\
+      ,\n      \"collapsed\": true,\n      \"gridPos\": {\"x\": 0, \"y\": 13, \"w\": 24, \"h\": 1},\n\
+      \      \"panels\": [\n        {\n          \"id\": 5,\n          \"type\": \"table\",\n        \
+      \  \"title\": \"Self-audit\",\n          \"description\": \"Rolling accuracy of past forecasts:\
+      \ interval coverage, scaled error and number of scored forecasts.\",\n          \"gridPos\": {\"\
+      x\": 0, \"y\": 14, \"w\": 12, \"h\": 8},\n          \"datasource\": {\"type\": \"prometheus\", \"\
+      uid\": \"prometheus\"},\n          \"timeFrom\": \"5m\",\n          \"hideTimeOverride\": true,\n\
+      \          \"fieldConfig\": {\n            \"defaults\": {\"noValue\": \"no self-audit scores yet:\
+      \ they appear once forecasts come due\"},\n            \"overrides\": []\n          },\n       \
+      \   \"options\": {\"showHeader\": true},\n          \"transformations\": [\n            {\"id\"\
+      : \"merge\", \"options\": {}},\n            {\"id\": \"organize\", \"options\": {\n            \
+      \  \"excludeByName\": {\"Time\": true, \"__name__\": true, \"job\": true, \"instance\": true},\n\
+      \              \"renameByName\": {\n                \"Value #A\": \"Coverage q10-q90\",\n      \
+      \          \"Value #B\": \"MASE\",\n                \"Value #C\": \"Scored forecasts\"\n       \
+      \       }\n            }}\n          ],\n          \"targets\": [\n            {\"refId\": \"A\"\
+      , \"instant\": true, \"range\": false, \"format\": \"table\",\n             \"expr\": \"promcast_selfaudit_coverage_ratio{target=\\\
+      \"demo_disk_free\\\"}\",\n             \"datasource\": {\"type\": \"prometheus\", \"uid\": \"prometheus\"\
+      }},\n            {\"refId\": \"B\", \"instant\": true, \"range\": false, \"format\": \"table\",\n\
+      \             \"expr\": \"promcast_selfaudit_mase{target=\\\"demo_disk_free\\\"}\",\n          \
+      \   \"datasource\": {\"type\": \"prometheus\", \"uid\": \"prometheus\"}},\n            {\"refId\"\
+      : \"C\", \"instant\": true, \"range\": false, \"format\": \"table\",\n             \"expr\": \"\
+      promcast_selfaudit_samples{target=\\\"demo_disk_free\\\"}\",\n             \"datasource\": {\"type\"\
+      : \"prometheus\", \"uid\": \"prometheus\"}}\n          ]\n        },\n        {\n          \"id\"\
+      : 6,\n          \"type\": \"table\",\n          \"title\": \"Missingness\",\n          \"description\"\
+      : \"Share of missing samples in each series' context, and series skipped in the latest cycle.\"\
+      ,\n          \"gridPos\": {\"x\": 12, \"y\": 14, \"w\": 12, \"h\": 8},\n          \"datasource\"\
+      : {\"type\": \"prometheus\", \"uid\": \"prometheus\"},\n          \"timeFrom\": \"5m\",\n      \
+      \    \"hideTimeOverride\": true,\n          \"fieldConfig\": {\n            \"defaults\": {\"noValue\"\
+      : \"unavailable\"},\n            \"overrides\": []\n          },\n          \"options\": {\"showHeader\"\
+      : true},\n          \"transformations\": [\n            {\"id\": \"merge\", \"options\": {}},\n\
+      \            {\"id\": \"organize\", \"options\": {\n              \"excludeByName\": {\"Time\":\
+      \ true, \"__name__\": true, \"job\": true, \"instance\": true},\n              \"indexByName\":\
+      \ {\"Value #A\": 0, \"Value #B\": 1, \"target\": 2},\n              \"renameByName\": {\"Value #A\"\
+      : \"Missing fraction\", \"Value #B\": \"Skipped\"}\n            }}\n          ],\n          \"targets\"\
+      : [\n            {\"refId\": \"A\", \"instant\": true, \"range\": false, \"format\": \"table\",\n\
+      \             \"expr\": \"promcast_series_missing_fraction{target=\\\"demo_disk_free\\\"}\",\n \
+      \            \"datasource\": {\"type\": \"prometheus\", \"uid\": \"prometheus\"}},\n           \
+      \ {\"refId\": \"B\", \"instant\": true, \"range\": false, \"format\": \"table\",\n             \"\
+      expr\": \"promcast_series_skipped{target=\\\"demo_disk_free\\\"} or ignoring(reason) (0 * promcast_series_missing_fraction{target=\\\
+      \"demo_disk_free\\\"})\",\n             \"datasource\": {\"type\": \"prometheus\", \"uid\": \"prometheus\"\
+      }}\n          ]\n        }\n      ]\n    }\n  ]\n}\n"
+volumes:
+  work: null
+  prometheus-data: null
+name: promcast-demo

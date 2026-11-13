@@ -1,0 +1,136 @@
+{
+  "budget_per_week": 1.0,
+  "corpora": {
+    "e1": {
+      "caveats": [
+        "Synthetic scenario: linear_leak. Seed: 0.",
+        "Synthetic scenario: accelerating_leak. Seed: 0.",
+        "Synthetic scenario: daily_seasonal_peak. Seed: 0.",
+        "Synthetic scenario: step_change. Seed: 0.",
+        "Synthetic scenario: saturation_curve. Seed: 0.",
+        "Synthetic scenario: noisy_flat. Seed: 0.",
+        "Synthetic scenario: gappy_accelerating_leak. Seed: 0."
+      ],
+      "corpus": "e1",
+      "dataset_sha256": [
+        "synthetic; no dataset files"
+      ],
+      "labelled_methods": null,
+      "methods": {
+        "chronos-2-small": {
+          "false_alerts_per_week": 0.0,
+          "incidents": 5,
+          "lead_ci": [
+            60.0,
+            60.0
+          ],
+          "median_lead_s": 60.0,
+          "method": "chronos-2-small",
+          "n": 7,
+          "precision": 1.0,
+          "recall": 0.4,
+          "recall_ci": [
+            0.0,
+            1.0
+          ]
+        },
+        "ets": {
+          "false_alerts_per_week": 0.0,
+          "incidents": 5,
+          "lead_ci": null,
+          "median_lead_s": null,
+          "method": "ets",
+          "n": 7,
+          "precision": 0.0,
+          "recall": 0.0,
+          "recall_ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "linear": {
+          "false_alerts_per_week": 0.0,
+          "incidents": 5,
+          "lead_ci": [
+            60.0,
+            420.0
+          ],
+          "median_lead_s": 240.0,
+          "method": "linear",
+          "n": 7,
+          "precision": 1.0,
+          "recall": 0.4,
+          "recall_ci": [
+            0.0,
+            1.0
+          ]
+        },
+        "seasonal-naive": {
+          "false_alerts_per_week": 0.0,
+          "incidents": 5,
+          "lead_ci": null,
+          "median_lead_s": null,
+          "method": "seasonal-naive",
+          "n": 7,
+          "precision": 0.0,
+          "recall": 0.0,
+          "recall_ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "static-margin": {
+          "false_alerts_per_week": 1.02040816,
+          "incidents": 5,
+          "lead_ci": null,
+          "median_lead_s": null,
+          "method": "static-margin",
+          "n": 7,
+          "precision": 0.0,
+          "recall": 0.0,
+          "recall_ci": [
+            0.0,
+            0.0
+          ]
+        },
+        "toto-2.0-22m": {
+          "false_alerts_per_week": 0.0,
+          "incidents": 5,
+          "lead_ci": [
+            60.0,
+            420.0
+          ],
+          "median_lead_s": 60.0,
+          "method": "toto-2.0-22m",
+          "n": 7,
+          "precision": 1.0,
+          "recall": 0.6,
+          "recall_ci": [
+            0.0,
+            1.0
+          ]
+        },
+        "toto-2.0-4m": {
+          "false_alerts_per_week": 0.0,
+          "incidents": 5,
+          "lead_ci": [
+            60.0,
+            420.0
+          ],
+          "median_lead_s": 60.0,
+          "method": "toto-2.0-4m",
+          "n": 7,
+          "precision": 1.0,
+          "recall": 0.8,
+          "recall_ci": [
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "n": 7,
+      "wall_time_s": 55683.681
+    }
+  },
+  "verdict": "ties"
+}

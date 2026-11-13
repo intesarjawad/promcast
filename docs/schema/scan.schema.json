@@ -1,0 +1,155 @@
+{
+  "$defs": {
+    "ScanRow": {
+      "additionalProperties": false,
+      "description": "One forecast and its comparator in the public scan document.",
+      "properties": {
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "object"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "threshold": {
+          "title": "Threshold",
+          "type": "number"
+        },
+        "promcast_breach_ts": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Promcast Breach Ts"
+        },
+        "linear_breach_ts": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Linear Breach Ts"
+        },
+        "missing_fraction": {
+          "title": "Missing Fraction",
+          "type": "number"
+        },
+        "short_history_min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Short History Min"
+        },
+        "horizon_s": {
+          "title": "Horizon S",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "target",
+        "labels",
+        "value",
+        "unit",
+        "threshold",
+        "promcast_breach_ts",
+        "linear_breach_ts",
+        "missing_fraction",
+        "short_history_min",
+        "horizon_s"
+      ],
+      "title": "ScanRow",
+      "type": "object"
+    },
+    "ScanSkipped": {
+      "additionalProperties": false,
+      "description": "One unforecast series and an actionable warmup estimate when known.",
+      "properties": {
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Labels",
+          "type": "object"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target",
+        "labels",
+        "reason"
+      ],
+      "title": "ScanSkipped",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Versioned JSON surface shared with the countdown board.",
+  "properties": {
+    "url": {
+      "title": "Url",
+      "type": "string"
+    },
+    "model": {
+      "title": "Model",
+      "type": "string"
+    },
+    "origin_ts": {
+      "title": "Origin Ts",
+      "type": "integer"
+    },
+    "rows": {
+      "items": {
+        "$ref": "#/$defs/ScanRow"
+      },
+      "title": "Rows",
+      "type": "array"
+    },
+    "skipped": {
+      "items": {
+        "$ref": "#/$defs/ScanSkipped"
+      },
+      "title": "Skipped",
+      "type": "array"
+    }
+  },
+  "required": [
+    "url",
+    "model",
+    "origin_ts",
+    "rows",
+    "skipped"
+  ],
+  "title": "ScanDocument",
+  "type": "object"
+}

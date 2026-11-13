@@ -1,0 +1,12 @@
+name: windows-disk
+requires:
+- windows_logical_disk_free_bytes
+- windows_logical_disk_size_bytes
+query: windows_logical_disk_free_bytes / windows_logical_disk_size_bytes
+direction: below
+threshold: 0.05
+unit: ratio
+show:
+- instance
+- volume
+source: https://github.com/prometheus-community/windows_exporter/blob/master/docs/collector.logical_disk.md

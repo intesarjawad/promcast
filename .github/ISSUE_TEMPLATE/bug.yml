@@ -1,0 +1,24 @@
+name: Bug report
+description: Report unexpected behavior with a reproducible example.
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and observed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include the version, platform and a minimal redacted configuration.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: promcast doctor output
+      description: Remove credentials, private hostnames and sensitive metric labels. If unavailable, explain why.
+      render: text
+    validations:
+      required: true

@@ -1,0 +1,23 @@
+tsdb:
+  url: http://prometheus:9090
+model:
+  name: toto-2.0-22m
+  batch_size: 16
+  cache_dir: /opt/promcast/models
+server:
+  listen: 0.0.0.0:8787
+cycle: 1m
+targets:
+  - name: demo_disk_free
+    query: demo_disk_free_bytes
+    step: 1m
+    context: 1d
+    horizon: 2h
+    season: 1d
+    direction: below
+    threshold: 0
+    quantile: 0.9
+    warn: 1h
+    method: toto
+    linear_window: 1h
+    max_series: 50

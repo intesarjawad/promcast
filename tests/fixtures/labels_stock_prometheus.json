@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "data": [
+    "process_open_fds",
+    "process_max_fds",
+    "prometheus_tsdb_storage_blocks_bytes",
+    "prometheus_tsdb_retention_limit_bytes"
+  ]
+}

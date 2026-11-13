@@ -1,0 +1,2 @@
+error: cannot reach http://prometheus:9090: connection refused
+next:  edit tsdb.url in your configuration, or give promcast scan another URL

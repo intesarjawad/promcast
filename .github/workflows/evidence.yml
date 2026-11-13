@@ -1,0 +1,136 @@
+name: Evidence
+on:
+  workflow_dispatch:
+    inputs:
+      accept_drift:
+        description: Publish headline cells that moved more than 10 % since the last report
+        type: boolean
+        default: false
+  schedule:
+    - cron: '0 3 1 * *'
+permissions:
+  contents: read
+env:
+  SHARDS: 16
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: 0.13.7
+          python-version: '3.12'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/promcast/models
+          key: models-${{ hashFiles('src/promcast/shell/model_download.py') }}
+      - run: uv sync --locked
+      - run: uv run python -m promcast.shell.model_download
+      - run: uv run promcast bench --json > bench-linux.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bench-linux
+          path: bench-linux.json
+      - name: Fail if any shard would outlast the 5 h budget
+        run: |
+          # The slowest measured cycle prices every method, so baselines are overestimated.
+          per_forecast=$(jq '[.measurements[] | .median_seconds_per_cycle] | max / .series_count' bench-linux.json)
+          uv run python scripts/evidence.py --estimate --seconds-per-forecast "$per_forecast" | tee estimate.txt
+          awk -v shards="$SHARDS" '
+            $1 == "e1:" || $1 == "e3:" { hours += $(NF - 1) }
+            END {
+              per_shard = hours / shards
+              printf "E1 + E3: %.1f hours over %d shards, %.2f hours each\n", hours, shards, per_shard
+              if (per_shard > 5) { print "A shard would exceed 5 h; raise SHARDS (at most 20)"; exit 1 }
+            }' estimate.txt
+  shard:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: 0.13.7
+          python-version: '3.12'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/promcast/models
+          key: models-compare-${{ hashFiles('src/promcast/shell/model_download.py') }}
+      - run: uv sync --locked --extra compare
+      - run: uv run python -m promcast.shell.model_download --with-compare
+      - run: uv run python scripts/fetch_nab.py
+      - run: >-
+          uv run python scripts/evidence.py --corpus e1 --corpus e3
+          --cache-dir evidence-cache --shard ${{ matrix.shard }}/${{ env.SHARDS }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: evidence-shard-${{ matrix.shard }}
+          path: evidence-cache/
+  regenerate:
+    needs: shard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: 0.13.7
+          python-version: '3.12'
+      - run: uv sync --locked
+      - run: uv run python scripts/fetch_nab.py
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: evidence-shard-*
+          path: evidence-cache
+          merge-multiple: true
+      - run: >-
+          uv run python scripts/evidence.py --corpus e1 --corpus e3 --cache-dir evidence-cache --merge
+          ${{ inputs.accept_drift && '--accept-drift' || '' }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: evidence-report
+          path: |
+            docs/evidence.md
+            site/data/
+      # Scheduled runs only report; publishing waits for someone to start the run by hand.
+      - id: commit
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git add docs/evidence.md site/data
+          if git diff --cached --quiet; then
+            echo 'Evidence unchanged; nothing to deploy'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit --message 'Regenerate evidence'
+          git push origin "HEAD:$GITHUB_REF_NAME"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+  deploy:
+    needs: regenerate
+    if: needs.regenerate.outputs.sha != ''
+    permissions:
+      pages: write
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/pages.yml
+    with:
+      ref: ${{ needs.regenerate.outputs.sha }}

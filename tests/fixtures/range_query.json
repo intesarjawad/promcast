@@ -1,0 +1,19 @@
+{
+  "resultType": "matrix",
+  "result": [
+    {
+      "metric": {"__name__": "disk_free", "job": "node", "instance": "middle"},
+      "values": [[1000, "10"], [1010, "9"], [1030, "7"], [1040, "6"]]
+    },
+    {
+      "metric": {"__name__": "disk_free", "instance": "tail", "job": "node"},
+      "values": [[1000, "10"], [1010, "9"], [1020, "8"]]
+    },
+    {
+      "metric": {"instance": "nan"},
+      "values": [[1000, "NaN"], [1010, "9"], [1020, "NaN"], [1030, "7"], [1040, "6"]]
+    },
+    {"metric": {"instance": "positive_infinity"}, "values": [[1020, "+Inf"]]},
+    {"metric": {"instance": "negative_infinity"}, "values": [[1020, "-Inf"]]}
+  ]
+}

@@ -1,0 +1,91 @@
+{
+ "url": "http://prometheus:9090",
+ "model": "toto-2.0-22m",
+ "origin_ts": 1794319200,
+ "rows": [
+  {
+   "target": "disk",
+   "labels": {
+    "instance": "db-01",
+    "mountpoint": "/var/lib/postgresql"
+   },
+   "value": 0.17741192079100504,
+   "unit": "ratio",
+   "threshold": 0.05,
+   "promcast_breach_ts": 1794323700.0,
+   "linear_breach_ts": 1794326400.0,
+   "missing_fraction": 0.0,
+   "short_history_min": null,
+   "horizon_s": 21600
+  },
+  {
+   "target": "disk",
+   "labels": {
+    "instance": "logs-01",
+    "mountpoint": "/var/log"
+   },
+   "value": 0.07768992300529322,
+   "unit": "ratio",
+   "threshold": 0.05,
+   "promcast_breach_ts": 1794332100.0,
+   "linear_breach_ts": 1794329700.0,
+   "missing_fraction": 0.0,
+   "short_history_min": null,
+   "horizon_s": 21600
+  },
+  {
+   "target": "disk",
+   "labels": {
+    "instance": "ingest-02",
+    "mountpoint": "/var/spool/batch"
+   },
+   "value": 0.2889826739283029,
+   "unit": "ratio",
+   "threshold": 0.05,
+   "promcast_breach_ts": null,
+   "linear_breach_ts": 1794328800.0,
+   "missing_fraction": 0.0,
+   "short_history_min": null,
+   "horizon_s": 21600
+  },
+  {
+   "target": "disk",
+   "labels": {
+    "instance": "web-03",
+    "mountpoint": "/"
+   },
+   "value": 0.6089894442096763,
+   "unit": "ratio",
+   "threshold": 0.05,
+   "promcast_breach_ts": null,
+   "linear_breach_ts": null,
+   "missing_fraction": 0.0,
+   "short_history_min": null,
+   "horizon_s": 21600
+  },
+  {
+   "target": "memory",
+   "labels": {
+    "instance": "cache-01"
+   },
+   "value": 0.3930443343934748,
+   "unit": "ratio",
+   "threshold": 0.05,
+   "promcast_breach_ts": null,
+   "linear_breach_ts": null,
+   "missing_fraction": 0.0,
+   "short_history_min": null,
+   "horizon_s": 21600
+  }
+ ],
+ "skipped": [
+  {
+   "target": "disk",
+   "labels": {
+    "instance": "edge-04",
+    "mountpoint": "/data"
+   },
+   "reason": "too_short"
+  }
+ ]
+}

@@ -1,0 +1,7 @@
+{
+  "status": "success",
+  "data": [
+    "windows_logical_disk_free_bytes",
+    "windows_logical_disk_size_bytes"
+  ]
+}

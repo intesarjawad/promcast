@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: If you use Promcast, please cite it as below.
+title: "Promcast: forecasts for Prometheus metrics that fire alerts before a threshold is crossed"
+type: software
+authors:
+  - family-names: Jawad
+    given-names: Intesar
+version: 0.1.0
+license: Apache-2.0
+repository-code: "https://github.com/intesarjawad/promcast"
+abstract: >-
+  Promcast reads series from a Prometheus-compatible TSDB, forecasts them and serves the
+  forecasts back as metrics, so an alert can fire before a threshold is crossed.
+keywords:
+  - Prometheus
+  - time series forecasting
+  - alerting
+  - observability

@@ -1,0 +1,17 @@
+name: It worked
+description: Share an observed outcome and enough context to understand it.
+body:
+  - type: textarea
+    id: setup
+    attributes:
+      label: Version and setup
+      description: Remove private hostnames, credentials and sensitive metric labels.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Observed outcome
+      description: Describe what happened and the evidence supporting it.
+    validations:
+      required: true

@@ -1,0 +1,40 @@
+[
+  {
+    "method": "POST",
+    "path": "/api/v1/query",
+    "query_params": {},
+    "form_params": {
+      "query": [
+        "1+1"
+      ],
+      "time": [
+        "4"
+      ]
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/status/buildinfo",
+    "query_params": {},
+    "form_params": {}
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/query_range",
+    "query_params": {},
+    "form_params": {
+      "end": [
+        "1793754000"
+      ],
+      "query": [
+        "promcast_forecast_q50"
+      ],
+      "start": [
+        "1793750400"
+      ],
+      "step": [
+        "60"
+      ]
+    }
+  }
+]

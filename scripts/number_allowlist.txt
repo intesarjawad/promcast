@@ -1,0 +1,16 @@
+Toto 2.0
+Toto-2.0-22m
+Toto-2.0-4m
+Chronos-2
+protocol-v1
+Prometheus 3
+Python 3.12
+Apache-2.0
+3000
+8428
+8787
+9090
+9093
+9100
+Compose 2.34.0
+uv 0.13.7

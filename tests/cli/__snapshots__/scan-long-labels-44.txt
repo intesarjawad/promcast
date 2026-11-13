@@ -1,0 +1,14 @@
+  PROMCAST   localhost:9090 · 22:13 UTC
+
+First to fill in 1h 30m
+ip-10-0-123-45.eu-west-1.compute.internal:9…
+
+now     30m      1h    1h 30m     2h
+ ┼┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┼┈┈
+ ip-10-0-123-45.eu-west-1.compute.internal:…
+ ███◆█████████████████████✕────────── 1h 30m
+
+███ lead  ✕ limit  ◆ linear
+
+next promcast init http://localhost:9090
+next promcast replay --auto

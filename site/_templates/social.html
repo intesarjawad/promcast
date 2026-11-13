@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Promcast social preview</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="card">
+<div class="card-top">
+  <b class="mark">promcast</b>
+  <p>Predicted threshold crossings, forecast at <b>{{now_at}} UTC</b> · {{model}}</p>
+</div>
+<h1><span>{{host}}: predicted crossing at {{p_at}}.</span> <span class="lin">predict_linear: {{d_at}}, {{late}}&nbsp;later.</span></h1>
+<div class="card-plate">
+  <div class="frame">{{sheet_social}}</div>
+  <table class="arrivals">
+    <caption>Arrives at {{threshold}}&nbsp;% free</caption>
+    <thead><tr><th scope="col">Series</th><th scope="col">Promcast</th><th scope="col" class="ln">Linear</th></tr></thead>
+    <tbody>{{arrivals}}</tbody>
+  </table>
+</div>
+</body>
+</html>

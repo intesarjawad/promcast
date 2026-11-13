@@ -1,0 +1,11 @@
+name: memory
+requires:
+- node_memory_MemAvailable_bytes
+- node_memory_MemTotal_bytes
+query: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes
+direction: below
+threshold: 0.05
+unit: ratio
+show:
+- instance
+source: https://github.com/prometheus/node_exporter/blob/master/collector/meminfo_linux.go

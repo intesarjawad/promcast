@@ -1,0 +1,12 @@
+name: prometheus-self
+requires:
+- process_open_fds
+- process_max_fds
+query: process_open_fds / process_max_fds
+direction: above
+threshold: 0.8
+unit: ratio
+show:
+- instance
+- job
+source: https://github.com/prometheus/client_golang/blob/main/prometheus/process_collector.go

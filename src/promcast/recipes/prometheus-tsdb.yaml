@@ -1,0 +1,12 @@
+name: prometheus-tsdb
+requires:
+- prometheus_tsdb_storage_blocks_bytes
+- prometheus_tsdb_retention_limit_bytes
+query: prometheus_tsdb_storage_blocks_bytes / (prometheus_tsdb_retention_limit_bytes > 0)
+direction: above
+threshold: 0.9
+unit: ratio
+show:
+- instance
+- job
+source: https://github.com/prometheus/prometheus/blob/v3.15.1/tsdb/db.go

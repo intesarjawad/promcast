@@ -1,0 +1,18 @@
+groups:
+- name: promcast
+  rules:
+  - alert: PromcastBreachSoon
+    expr: (promcast_breach_timestamp_seconds{target="root_disk_free",method="toto"} - time()) / 60 < 120
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: '{{ $labels.target }} forecast to breach in {{ $value | printf "%.0f" }} min'
+      lead_minutes: '{{ $value | printf "%.0f" }}'
+      forecast_origin: '{{ with printf "promcast_forecast_origin_timestamp_seconds{target=%q}" $labels.target | query }}{{ . | first | value | humanizeTimestamp }}{{ end }}'
+      model: toto-2.0-22m
+  - alert: PromcastForecastStale
+    expr: time() - promcast_last_success_timestamp_seconds{target="root_disk_free"} > 360
+    for: 5m
+    labels:
+      severity: info

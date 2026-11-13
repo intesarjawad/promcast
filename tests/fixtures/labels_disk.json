@@ -1,0 +1,7 @@
+{
+  "status": "success",
+  "data": [
+    "node_filesystem_avail_bytes",
+    "node_filesystem_size_bytes"
+  ]
+}

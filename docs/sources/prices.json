@@ -1,0 +1,54 @@
+{
+  "facts": [
+    {
+      "id": "datadog-infrastructure-enterprise",
+      "kind": "price",
+      "url": "https://www.datadoghq.com/pricing/",
+      "quote": "Enterprise Starting At $23 Per host, per month* Advanced features and administrative controls Machine learning-based alerts Live Processes Governance Console *Billed annually or $27 on-demand",
+      "read": "2026-11-09"
+    },
+    {
+      "id": "grafana-cloud-ml-access",
+      "kind": "access",
+      "url": "https://grafana.com/docs/grafana-cloud/alerting-and-irm/machine-learning/billing/",
+      "quote": "Grafana Machine Learning features and capabilities (including forecasts, outlier detection, and Sift) are free to use for all Grafana Cloud accounts.",
+      "read": "2026-11-09"
+    },
+    {
+      "id": "grafana-cloud-forecast-limits",
+      "kind": "limit",
+      "url": "https://grafana.com/docs/grafana-cloud/alerting-and-irm/machine-learning/billing/",
+      "quote": "Forecasting 10 forecasts per hosted Grafana instance 100 series per forecast",
+      "qualifier": "To request an increase in any of these limits, contact us",
+      "read": "2026-11-09"
+    },
+    {
+      "id": "grafana-cloud-pro",
+      "kind": "price",
+      "url": "https://grafana.com/pricing/",
+      "quote": "From $19 / month + usage",
+      "read": "2026-11-09"
+    },
+    {
+      "id": "new-relic-predictive-alerts-access",
+      "kind": "access",
+      "url": "https://docs.newrelic.com/docs/alerts/create-alert/set-thresholds/predictive-alerts/",
+      "quote": "Predictive Alerts is available to all Full platform users across all customers.",
+      "read": "2026-11-09"
+    },
+    {
+      "id": "new-relic-full-platform-users",
+      "kind": "price",
+      "url": "https://newrelic.com/pricing",
+      "quote": "Full platform users Free One free user Standard $10/first user $99/additional user (maximum of 5) Pro $349/user (for annual commitments)",
+      "read": "2026-11-09"
+    },
+    {
+      "id": "vmanomaly-enterprise-licence",
+      "kind": "access",
+      "url": "https://docs.victoriametrics.com/anomaly-detection/quickstart/",
+      "quote": "To run vmanomaly, you need to have VictoriaMetrics Enterprise license.",
+      "read": "2026-11-09"
+    }
+  ]
+}

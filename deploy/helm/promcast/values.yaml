@@ -1,0 +1,90 @@
+image:
+  repository: ghcr.io/intesarjawad/promcast
+  # Defaults to the chart's appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  # Generated from the release name when empty and create is true.
+  name: ""
+
+# Rendered as promcast.yaml. Any key documented in docs/config.md is accepted;
+# server.listen also sets the container and Service port. Credentials belong in
+# files mounted through extraVolumes, or in ${VAR} references filled from extraEnv.
+config:
+  tsdb:
+    url: http://prometheus:9090
+  model:
+    name: toto-2.0-22m
+    batch_size: 16
+    cache_dir: /opt/promcast/models
+  server:
+    listen: 0.0.0.0:8787
+  cycle: 2m
+  targets:
+    - name: root_disk_free
+      query: node_filesystem_avail_bytes{mountpoint="/"}
+      step: 5m
+      context: 4d
+      horizon: 6h
+      season: 1d
+      direction: below
+      threshold: 5000000000
+      quantile: 0.9
+      warn: 2h
+      method: toto
+      linear_window: 1h
+      max_series: 50
+
+extraEnv: []
+extraVolumes: []
+extraVolumeMounts: []
+
+service:
+  type: ClusterIP
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+
+# Health is only reported after every target has forecast once, so liveness
+# watches the port and readiness watches /healthz.
+startupProbe:
+  tcpSocket:
+    port: http
+  periodSeconds: 5
+  failureThreshold: 60
+livenessProbe:
+  tcpSocket:
+    port: http
+  periodSeconds: 20
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  periodSeconds: 10
+
+resources: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,244 @@
+{
+  "uid": "promcast-demo",
+  "title": "Synthetic disk forecast",
+  "tags": ["promcast"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "30s",
+  "time": {"from": "now-6h", "to": "now+2h"},
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Synthetic free disk space and forecasts",
+      "description": "Observed free space, which stops at its newest sample instead of running flat into the forecast hours, the model's q10 to q90 forecast band with its q50 line, and the full-disk threshold. The band is the model's own uncertainty, drawn as returned; only the axis is clipped to 0 to 500 GB.",
+      "gridPos": {"x": 0, "y": 0, "w": 16, "h": 10},
+      "datasource": {"type": "datasource", "uid": "-- Mixed --"},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0, "max": 500000000000,
+          "custom": {"lineWidth": 2, "fillOpacity": 0, "showPoints": "never", "spanNulls": false}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Actual"},
+           "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#EDEDE6"}}]},
+          {"matcher": {"id": "byName", "options": "q10"},
+           "properties": [
+             {"id": "color", "value": {"mode": "fixed", "fixedColor": "#D7FF2F"}},
+             {"id": "custom.lineWidth", "value": 0}
+           ]},
+          {"matcher": {"id": "byName", "options": "q50"},
+           "properties": [
+             {"id": "color", "value": {"mode": "fixed", "fixedColor": "#F3FFB8"}},
+             {"id": "custom.lineWidth", "value": 1},
+             {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [6, 4]}}
+           ]},
+          {"matcher": {"id": "byName", "options": "q90"},
+           "properties": [
+             {"id": "color", "value": {"mode": "fixed", "fixedColor": "#D7FF2F"}},
+             {"id": "custom.lineWidth", "value": 0},
+             {"id": "custom.fillOpacity", "value": 28},
+             {"id": "custom.fillBelowTo", "value": "q10"},
+             {"id": "custom.hideFrom", "value": {"legend": true, "tooltip": false, "viz": false}}
+           ]},
+          {"matcher": {"id": "byName", "options": "Full disk threshold"},
+           "properties": [
+             {"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [10, 10]}},
+             {"id": "color", "value": {"mode": "fixed", "fixedColor": "#FF4A3D"}}
+           ]}
+        ]
+      },
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi", "sort": "none"}
+      },
+      "targets": [
+        {"refId": "A", "expr": "demo_disk_free_bytes unless on() (time() - timestamp(demo_disk_free_bytes) > 75)", "legendFormat": "Actual",
+         "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"refId": "B", "expr": "promcast_forecast_q10{target=\"demo_disk_free\"}",
+         "legendFormat": "q10", "datasource": {"type": "prometheus", "uid": "promcast"}},
+        {"refId": "C", "expr": "promcast_forecast_q50{target=\"demo_disk_free\"}",
+         "legendFormat": "q50", "datasource": {"type": "prometheus", "uid": "promcast"}},
+        {"refId": "D", "expr": "promcast_forecast_q90{target=\"demo_disk_free\"}",
+         "legendFormat": "q90", "datasource": {"type": "prometheus", "uid": "promcast"}},
+        {"refId": "E", "expr": "vector(0)", "legendFormat": "Full disk threshold",
+         "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Breach in",
+      "description": "Minutes until the forecast first crosses the threshold, from Promcast and from Prometheus's linear extrapolation, in one unit so the two compare at a glance.",
+      "gridPos": {"x": 16, "y": 0, "w": 8, "h": 10},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "timeFrom": "5m",
+      "hideTimeOverride": true,
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: min",
+          "decimals": 1,
+          "noValue": "unavailable",
+          "color": {"mode": "fixed", "fixedColor": "#9A9DA3"},
+          "mappings": [
+            {"type": "value", "options": {"-1": {"text": "no breach forecast", "index": 0}}},
+            {"type": "special", "options": {"match": "null",
+             "result": {"text": "unavailable", "index": 1}}}
+          ]
+        },
+        "overrides": [
+          {"matcher": {"id": "byFrameRefID", "options": "A"},
+           "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#D7FF2F"}}]},
+          {"matcher": {"id": "byFrameRefID", "options": "B"},
+           "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "#9A9DA3"}}]}
+        ]
+      },
+      "options": {
+        "reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""},
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "text": {"valueSize": 28, "titleSize": 14},
+        "graphMode": "none",
+        "orientation": "vertical"
+      },
+      "targets": [
+        {"refId": "A", "instant": true, "range": false,
+         "expr": "clamp_min((promcast_breach_timestamp_seconds{target=\"demo_disk_free\",method=\"toto\"} - time()) / 60, 0) or on() (vector(-1) and on() (time() - promcast_last_success_timestamp_seconds{target=\"demo_disk_free\"} <= 180) and on() (up{job=\"promcast\"} == 1))",
+         "legendFormat": "Promcast", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"refId": "B", "instant": true, "range": false,
+         "expr": "clamp_min((promcast_breach_timestamp_seconds{target=\"demo_disk_free\",method=\"linear\"} - time()) / 60, 0) or on() (vector(-1) and on() (time() - promcast_last_success_timestamp_seconds{target=\"demo_disk_free\"} <= 180) and on() (up{job=\"promcast\"} == 1))",
+         "legendFormat": "predict_linear[1h]", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Forecast state",
+      "description": "Says in words whether the forecast is warming up, stale, already past the threshold, or current.",
+      "gridPos": {"x": 0, "y": 10, "w": 24, "h": 3},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "timeFrom": "5m",
+      "hideTimeOverride": true,
+      "fieldConfig": {
+        "defaults": {"noValue": "unavailable", "mappings": []},
+        "overrides": [
+          {"matcher": {"id": "byFrameRefID", "options": "A"},
+           "properties": [{"id": "mappings", "value": [
+             {"type": "value", "options": {"1": {"text": " ", "index": 0}}}]}]},
+          {"matcher": {"id": "byFrameRefID", "options": "B"},
+           "properties": [{"id": "unit", "value": "dateTimeAsLocal"}]},
+          {"matcher": {"id": "byFrameRefID", "options": "D"},
+           "properties": [{"id": "mappings", "value": [
+             {"type": "value", "options": {"1": {"text": " ", "index": 0}}}]}]},
+          {"matcher": {"id": "byFrameRefID", "options": "C"},
+           "properties": [{"id": "mappings", "value": [
+             {"type": "value", "options": {"1": {"text": " ", "index": 0}}}]}]}
+        ]
+      },
+      "options": {
+        "reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""},
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "text": {"valueSize": 28, "titleSize": 14},
+        "graphMode": "none",
+        "orientation": "vertical"
+      },
+      "targets": [
+        {"refId": "A", "instant": true, "range": false,
+         "expr": "vector(1) unless on() promcast_last_success_timestamp_seconds{target=\"demo_disk_free\"}",
+         "legendFormat": "warming up: first forecast within one cycle",
+         "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"refId": "B", "instant": true, "range": false,
+         "expr": "promcast_last_success_timestamp_seconds{target=\"demo_disk_free\"} * 1000 and on() (time() - promcast_last_success_timestamp_seconds{target=\"demo_disk_free\"} > 180)",
+         "legendFormat": "stale since", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"refId": "D", "instant": true, "range": false,
+         "expr": "vector(1) and on() (time() - promcast_last_success_timestamp_seconds{target=\"demo_disk_free\"} <= 180) and on() (demo_disk_free_bytes > 0) and on() (up{job=\"promcast\"} == 1)",
+         "legendFormat": "forecast current",
+         "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"refId": "C", "instant": true, "range": false,
+         "expr": "vector(1) and on() (demo_disk_free_bytes <= 0)",
+         "legendFormat": "already past threshold",
+         "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ]
+    },
+    {
+      "id": 4,
+      "type": "row",
+      "title": "Trust",
+      "collapsed": true,
+      "gridPos": {"x": 0, "y": 13, "w": 24, "h": 1},
+      "panels": [
+        {
+          "id": 5,
+          "type": "table",
+          "title": "Self-audit",
+          "description": "Rolling accuracy of past forecasts: interval coverage, scaled error and number of scored forecasts.",
+          "gridPos": {"x": 0, "y": 14, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "timeFrom": "5m",
+          "hideTimeOverride": true,
+          "fieldConfig": {
+            "defaults": {"noValue": "no self-audit scores yet: they appear once forecasts come due"},
+            "overrides": []
+          },
+          "options": {"showHeader": true},
+          "transformations": [
+            {"id": "merge", "options": {}},
+            {"id": "organize", "options": {
+              "excludeByName": {"Time": true, "__name__": true, "job": true, "instance": true},
+              "renameByName": {
+                "Value #A": "Coverage q10-q90",
+                "Value #B": "MASE",
+                "Value #C": "Scored forecasts"
+              }
+            }}
+          ],
+          "targets": [
+            {"refId": "A", "instant": true, "range": false, "format": "table",
+             "expr": "promcast_selfaudit_coverage_ratio{target=\"demo_disk_free\"}",
+             "datasource": {"type": "prometheus", "uid": "prometheus"}},
+            {"refId": "B", "instant": true, "range": false, "format": "table",
+             "expr": "promcast_selfaudit_mase{target=\"demo_disk_free\"}",
+             "datasource": {"type": "prometheus", "uid": "prometheus"}},
+            {"refId": "C", "instant": true, "range": false, "format": "table",
+             "expr": "promcast_selfaudit_samples{target=\"demo_disk_free\"}",
+             "datasource": {"type": "prometheus", "uid": "prometheus"}}
+          ]
+        },
+        {
+          "id": 6,
+          "type": "table",
+          "title": "Missingness",
+          "description": "Share of missing samples in each series' context, and series skipped in the latest cycle.",
+          "gridPos": {"x": 12, "y": 14, "w": 12, "h": 8},
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "timeFrom": "5m",
+          "hideTimeOverride": true,
+          "fieldConfig": {
+            "defaults": {"noValue": "unavailable"},
+            "overrides": []
+          },
+          "options": {"showHeader": true},
+          "transformations": [
+            {"id": "merge", "options": {}},
+            {"id": "organize", "options": {
+              "excludeByName": {"Time": true, "__name__": true, "job": true, "instance": true},
+              "indexByName": {"Value #A": 0, "Value #B": 1, "target": 2},
+              "renameByName": {"Value #A": "Missing fraction", "Value #B": "Skipped"}
+            }}
+          ],
+          "targets": [
+            {"refId": "A", "instant": true, "range": false, "format": "table",
+             "expr": "promcast_series_missing_fraction{target=\"demo_disk_free\"}",
+             "datasource": {"type": "prometheus", "uid": "prometheus"}},
+            {"refId": "B", "instant": true, "range": false, "format": "table",
+             "expr": "promcast_series_skipped{target=\"demo_disk_free\"} or ignoring(reason) (0 * promcast_series_missing_fraction{target=\"demo_disk_free\"})",
+             "datasource": {"type": "prometheus", "uid": "prometheus"}}
+          ]
+        }
+      ]
+    }
+  ]
+}

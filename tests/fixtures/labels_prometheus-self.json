@@ -1,0 +1,7 @@
+{
+  "status": "success",
+  "data": [
+    "process_open_fds",
+    "process_max_fds"
+  ]
+}

@@ -1,0 +1,14 @@
+   PROMCAST   localhost:9090 · fake · 22:15 UTC
+
+  Nothing fills in the next 10m
+
+                            now     2m       4m      6m       8m      10m
+                             ┼┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┼
+  host-000 /data             ──────────────────────────────────────────   clear
+
+  host-000 /data: short history: 10 min
+
+  ███ Promcast lead time   ✕ threshold reached   ◆ predict_linear
+
+  next promcast init http://localhost:9090
+  next promcast replay --auto (ETA up to 1 min for 30d)

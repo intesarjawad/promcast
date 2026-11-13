@@ -1,0 +1,17 @@
+name: Replay result
+description: Share a reproducible replay result with sensitive data removed.
+body:
+  - type: textarea
+    id: setup
+    attributes:
+      label: Version, platform, model and corpus
+      description: Include the command, data provenance and model revision. Do not upload private metrics.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Replay result and interpretation
+      description: Paste redacted results and explain any differences from expectations.
+    validations:
+      required: true

@@ -1,0 +1,6 @@
+promcast serves metrics at /metrics and health at /healthz on port {{ include "promcast.port" . }}.
+
+  kubectl --namespace {{ .Release.Namespace }} port-forward service/{{ include "promcast.fullname" . }} {{ include "promcast.port" . }}:{{ include "promcast.port" . }}
+
+/healthz reports unavailable until every target has produced a forecast; check
+that config.tsdb.url is reachable from the pod if the pod stays unready.

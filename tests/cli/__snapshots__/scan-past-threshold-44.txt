@@ -1,0 +1,14 @@
+  PROMCAST   localhost:9090 · 22:13 UTC
+
+Past threshold
+host-000 /data  3.1 % free
+
+now     30m      1h    1h 30m     2h
+ ┼┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┼┈┈
+ host-000 /data
+ █ past 5 % free · page now █████████    now
+
+███ lead  ✕ limit  ◆ linear
+
+next promcast init http://localhost:9090
+next promcast replay --auto

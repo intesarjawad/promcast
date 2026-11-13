@@ -1,0 +1,208 @@
+name: Checks
+on:
+  push:
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      bench:
+        description: Run the CPU benchmark and upload bench-linux.json
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: 0.13.7
+          python-version: '3.12'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/promcast/models
+          key: models-${{ hashFiles('src/promcast/shell/model_download.py') }}
+      - name: Install the pinned promtool
+        env:
+          PROMETHEUS_SHA256: 6a726885328ad9efebbf36e876ce2fb6225468a71fd1e7ce3ba666d5f4d97a84
+        run: |
+          archive=prometheus-3.15.1.linux-amd64
+          curl -fsSL "https://github.com/prometheus/prometheus/releases/download/v3.15.1/$archive.tar.gz" -o "$RUNNER_TEMP/prometheus.tar.gz"
+          echo "$PROMETHEUS_SHA256  $RUNNER_TEMP/prometheus.tar.gz" | sha256sum --check -
+          tar -xzf "$RUNNER_TEMP/prometheus.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/$archive" >> "$GITHUB_PATH"
+      - run: uv sync --locked --extra compare
+      - run: uv lock --check
+      - run: uv run python -m promcast.shell.model_download --with-compare
+      - run: make check
+      - run: make check-slow
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: 0.13.7
+          python-version: '3.12'
+      - run: uv sync --locked
+      - run: make check-copy
+      - run: uv run playwright install --with-deps chromium
+      - run: make check-site
+      - run: uv run python scripts/check_prices.py
+  compose-smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    # Two demo checks at about ten minutes each, plus the image build and the linear comparison.
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - run: docker compose up -d --build
+      - run: scripts/demo_check.sh --json demo.json
+      - name: Compare the linear breach time with predict_linear
+        run: >-
+          python3 scripts/linear_parity.py --target demo_disk_free
+          --query demo_disk_free_bytes --threshold 0 --window-s 3600
+      - name: Scan with no route out of the network
+        run: |
+          docker network create --internal promcast-egress
+          docker network connect --alias prometheus promcast-egress "$(docker compose ps -q prometheus)"
+          # `config --images SERVICE` also lists the images of its dependencies.
+          image=$(docker compose config --format json | jq -er '.services.promcast.image')
+          docker run --rm --network promcast-egress "$image" scan http://prometheus:9090 --json > scan.json
+          jq -e '.rows[0].labels.mountpoint == "/demo"' scan.json
+      - if: failure()
+        run: docker compose logs --no-color
+      - run: docker compose down -v
+      - name: Start the published Compose file with stdin closed
+        run: docker compose -f deploy/demo/compose.yaml up -d </dev/null
+      - run: scripts/demo_check.sh --json demo-oci.json
+      - if: failure()
+        run: docker compose -f deploy/demo/compose.yaml logs --no-color
+      - if: always()
+        run: docker compose -f deploy/demo/compose.yaml down -v
+  coldstart:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: 0.13.7
+          python-version: '3.12'
+      - run: uv build
+      - run: |
+          scripts/coldstart.sh --path uvx --wheel dist/*.whl
+          mv coldstart.json coldstart-uvx-demo.json
+      - run: |
+          scripts/coldstart.sh --path uvx --wheel dist/*.whl --stock
+          mv coldstart.json coldstart-uvx-stock.json
+      - if: runner.os == 'Linux'
+        run: |
+          docker build --tag "ghcr.io/intesarjawad/promcast:$(python3 scripts/image_tag.py)" .
+          scripts/coldstart.sh --path docker
+          mv coldstart.json coldstart-docker.json
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coldstart-${{ matrix.runner }}
+          path: coldstart-*.json
+          if-no-files-found: ignore
+  tsdb-compat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - backend: vm
+            compose: deploy/compose/victoriametrics.yml
+          - backend: mimir
+            compose: deploy/compose/mimir.yml
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - run: docker compose -f ${{ matrix.compose }} up -d
+      - run: scripts/tsdb_check.sh ${{ matrix.backend }}
+      - if: always()
+        run: docker compose -f ${{ matrix.compose }} down -v
+  helm-chart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: azure/setup-helm@2f5e7bc67f1f9972ab16657bb795f36d8f04de0e # v5.1.0
+      - uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
+      - run: helm lint --strict deploy/helm/promcast
+      - run: echo "IMAGE=ghcr.io/intesarjawad/promcast:$(python3 scripts/image_tag.py)" >> "$GITHUB_ENV"
+      - run: docker build --tag "$IMAGE" .
+      - uses: helm/kind-action@ea822c7bf1874f08e5a491df991c228edffc3376 # v1.15.2
+        with:
+          cluster_name: kind
+      - run: kind load docker-image "$IMAGE"
+      - run: ct install --charts deploy/helm/promcast
+  bench:
+    if: inputs.bench || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: 0.13.7
+          python-version: '3.12'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/promcast/models
+          key: models-${{ hashFiles('src/promcast/shell/model_download.py') }}
+      - run: uv sync --locked
+      - run: uv run python -m promcast.shell.model_download
+      - run: uv run promcast bench --json > bench-linux.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bench-linux
+          path: bench-linux.json
+      - name: Hold the 22m model to its memory and cycle budgets
+        run: |
+          rss=$(jq '[.measurements[] | select(.model == "toto-2.0-22m") | .peak_rss_bytes] | max' bench-linux.json)
+          median=$(jq '.measurements[] | select(.model == "toto-2.0-22m" and .context_steps == 1472) | .median_seconds_per_cycle' bench-linux.json)
+          echo "toto-2.0-22m: peak RSS $rss bytes, context-1472 median $median s"
+          if jq -en "$median >= 120" >/dev/null; then
+            echo "::warning::toto-2.0-22m takes $median s per cycle on this runner; switch the example config and README default to toto-2.0-4m"
+          fi
+          if jq -en "$rss >= 1500000000" >/dev/null; then
+            echo "toto-2.0-22m peaked at $rss bytes, at or above the 1.5 GB budget" >&2
+            exit 1
+          fi

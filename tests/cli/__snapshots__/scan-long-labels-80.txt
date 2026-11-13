@@ -1,0 +1,12 @@
+   PROMCAST   localhost:9090 · toto-2.0-22m · 22:13 UTC
+
+  First to fill  ip-10-0-123-45.eu-west-1.compute.internal:9100 /v…  in 1h 30m
+
+                            now       30m       1h      1h 30m     2h
+                             ┼┈┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┼┈┈┈
+  ip-10-0-123-45.eu-west-1.… ████◆█████████████████████████✕───────────  1h 30m
+
+  ███ Promcast lead time   ✕ threshold reached   ◆ predict_linear
+
+  next promcast init http://localhost:9090
+  next promcast replay --auto (ETA up to 10 min for 30d)

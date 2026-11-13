@@ -1,0 +1,28 @@
+tsdb:
+  url: http://prometheus:9090
+  timeout_s: 30
+  headers: {}
+  bearer_token_file: null
+  basic_auth: null
+  tls: {ca_file: null}
+model:
+  name: toto-2.0-22m
+  batch_size: 16
+  cache_dir: ~/.cache/promcast/models
+server:
+  listen: 0.0.0.0:8787
+cycle: 2m
+targets:
+  - name: root_disk_free
+    query: node_filesystem_avail_bytes{mountpoint="/"}
+    step: 5m
+    context: 4d
+    horizon: 6h
+    season: 1d
+    direction: below
+    threshold: 5e9
+    quantile: 0.9
+    warn: 2h
+    method: toto
+    linear_window: 1h
+    max_series: 50

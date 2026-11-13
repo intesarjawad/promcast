@@ -1,0 +1,12 @@
+apiVersion: v2
+name: promcast
+description: Forecasts for Prometheus metrics, served as metrics and a health endpoint
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+home: https://github.com/intesarjawad/promcast
+sources:
+  - https://github.com/intesarjawad/promcast
+maintainers:
+  - name: intesarjawad
+    url: https://github.com/intesarjawad

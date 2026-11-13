@@ -1,0 +1,60 @@
+{
+  "cpu_model": "Apple M5",
+  "platform": "macOS-27.2-arm64-arm-64bit",
+  "series_count": 50,
+  "horizon_steps": 120,
+  "repeats": 3,
+  "batch_size": 16,
+  "cycle_budget_s": 60.0,
+  "measurements": [
+    {
+      "model": "toto-2.0-22m",
+      "context_steps": 512,
+      "seconds_per_cycle": [
+        0.09854458319023252,
+        0.09322562511079013,
+        0.09460800001397729
+      ],
+      "median_seconds_per_cycle": 0.09460800001397729,
+      "peak_rss_bytes": 689651712,
+      "torch_threads": 5
+    },
+    {
+      "model": "toto-2.0-22m",
+      "context_steps": 1472,
+      "seconds_per_cycle": [
+        0.16985329100862145,
+        0.16323241707868874,
+        0.16451283311471343
+      ],
+      "median_seconds_per_cycle": 0.16451283311471343,
+      "peak_rss_bytes": 690077696,
+      "torch_threads": 5
+    },
+    {
+      "model": "toto-2.0-4m",
+      "context_steps": 512,
+      "seconds_per_cycle": [
+        0.04203224997036159,
+        0.03832258307375014,
+        0.04006729112006724
+      ],
+      "median_seconds_per_cycle": 0.04006729112006724,
+      "peak_rss_bytes": 542162944,
+      "torch_threads": 5
+    },
+    {
+      "model": "toto-2.0-4m",
+      "context_steps": 1472,
+      "seconds_per_cycle": [
+        0.05889554205350578,
+        0.05762404203414917,
+        0.054408208932727575
+      ],
+      "median_seconds_per_cycle": 0.05762404203414917,
+      "peak_rss_bytes": 564658176,
+      "torch_threads": 5
+    }
+  ],
+  "recommended": "toto-2.0-22m"
+}

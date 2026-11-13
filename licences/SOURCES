@@ -1,0 +1,9 @@
+58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd  dd-unit-scaling/LICENSE  https://raw.githubusercontent.com/DataDog/toto/44ea4e88852228039564aa3e76fac26aafac0803/LICENSE
+5739a8d6c5b50226cbf7e1e15f868a45a99828a0a7d902fc8db1d70e7cb2b121  dd-unit-scaling/NOTICE  https://raw.githubusercontent.com/DataDog/toto/44ea4e88852228039564aa3e76fac26aafac0803/NOTICE
+8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903  gcc-runtime/COPYING3  https://raw.githubusercontent.com/gcc-mirror/gcc/b71f1de6e9cf7181a288c0f39f9b1ef6580cf5c8/COPYING3
+9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74  gcc-runtime/COPYING.RUNTIME  https://raw.githubusercontent.com/gcc-mirror/gcc/b71f1de6e9cf7181a288c0f39f9b1ef6580cf5c8/COPYING.RUNTIME
+a9bdde5616ecdd1e980b44f360600ee8783b1f99b8cc83a2beb163a0a390e861  gcc-runtime/COPYING.LIB  https://raw.githubusercontent.com/gcc-mirror/gcc/b71f1de6e9cf7181a288c0f39f9b1ef6580cf5c8/COPYING.LIB
+190b5a9c8d9723fe958ad33916bd7346d96fab3c5ea90832bb02d854f620fcff  openblas/LICENSE  https://raw.githubusercontent.com/OpenMathLib/OpenBLAS/e0166008be8e466242aa76b2ff75ce3f0fbf574a/LICENSE
+b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5  arm-compute-library/MIT.txt  https://raw.githubusercontent.com/ARM-software/ComputeLibrary/7b256bb7965f2fd99cdee790a4b0e56dab438a8c/LICENSES/MIT.txt
+074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff  arm-compute-library/Apache-2.0.txt  https://raw.githubusercontent.com/ARM-software/ComputeLibrary/7b256bb7965f2fd99cdee790a4b0e56dab438a8c/LICENSES/Apache-2.0.txt
+5a93d5831e1297ab10fe643e1a631e83be392896da14ee2951285a79012df69d  arm-compute-library/BSD-3-Clause.txt  https://raw.githubusercontent.com/ARM-software/ComputeLibrary/7b256bb7965f2fd99cdee790a4b0e56dab438a8c/LICENSES/BSD-3-Clause.txt

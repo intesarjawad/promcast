@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Promcast: forecasts for Prometheus</title>
+<meta name="description" content="Promcast predicts when a disk, volume or memory series crosses its threshold, and shows predict_linear's guess beside it.">
+<meta property="og:title" content="{{host}}: predicted crossing at {{p_at}}. predict_linear: {{d_at}}, {{late}} later.">
+<meta property="og:description" content="Predicted crossing times from one forecast origin on a synthetic fleet.">
+<meta property="og:image" content="https://promcast.intesarjawad.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#efece4">
+<link rel="preload" href="fonts/TikTokSans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<a class="skip" href="#timetable">Skip to the timetable</a>
+
+<header class="bar">
+  <b class="mark">promcast</b>
+  <nav aria-label="Sections">
+    <a href="#read">How to read it</a><a href="#states">Terminal</a><a href="#grafana">Grafana</a><a href="#try">Try it</a><a href="https://github.com/intesarjawad/promcast">GitHub</a>
+  </nav>
+</header>
+
+<main>
+<section class="sheet" id="timetable" aria-labelledby="h1">
+  <div class="mast">
+    <h1 id="h1"><span>{{host}}: predicted crossing at {{p_at}}.</span> <span class="lin">predict_linear: {{d_at}}, {{late}}&nbsp;later.</span></h1>
+    <p class="run" id="run"><button class="cmd" type="button" data-copy="uvx --torch-backend cpu promcast scan"><span class="prompt" aria-hidden="true">$</span><code>uvx --torch-backend cpu promcast scan</code><span class="copy" aria-hidden="true">copy</span><span class="copied" role="status"></span></button>
+      <span class="note">Run it against your own Prometheus. Inference runs on the CPU.</span></p>
+  </div>
+
+  <div class="plate">
+    <p class="how">Drag the hand, or focus it and use the arrow keys.</p>
+    <div class="reading">
+      <p class="rd-name" id="rd-name">{{host}} <small>{{place}}</small></p>
+      <dl>
+        <div><dt>Promcast</dt><dd id="rd-p">{{rd_p}}</dd></div>
+        <div class="ln"><dt>predict_linear</dt><dd id="rd-d">{{rd_d}}</dd></div>
+        <div class="st"><dt id="rd-say">{{rd_say}}</dt><dd id="rd-left">{{rd_left}}</dd></div>
+      </dl>
+    </div>
+    <figure class="tt" aria-describedby="tt-cap">
+      <div class="frame wide" data-sheet="w">{{sheet}}</div>
+      <div class="frame narrow" data-sheet="n">{{sheet_narrow}}</div>
+      <input class="clock" id="clock" type="range" min="0" max="{{ahead_s}}" step="300" value="{{still_s}}" aria-label="Clock hand, time after {{now_at}} UTC">
+      <p class="how-touch">Drag the hand.</p>
+      <figcaption id="tt-cap">The forecast is inked up to the hand and faint beyond it. Each stamp marks a predicted crossing. The red bar shows the difference between two predicted crossing times from the same forecast origin; it is not an alert replay.</figcaption>
+    </figure>
+    <table class="arrivals">
+      <caption>Arrives at {{threshold}}&nbsp;% free</caption>
+      <thead><tr><th scope="col">Series</th><th scope="col">Promcast</th><th scope="col" class="ln">Linear</th></tr></thead>
+      <tbody>{{arrivals}}</tbody>
+    </table>
+    <ul class="key" aria-label="Key">
+      <li><i class="k-hist"></i>measured</li>
+      <li><i class="k-q"></i>Promcast, nine quantiles</li>
+      <li><i class="k-lin"></i>predict_linear</li>
+      <li><i class="k-page"></i>{{threshold}}&nbsp;% free, the threshold</li>
+      <li class="src">Synthetic fleet, forecast at {{now_at}} UTC on {{date}} by {{model}}. {{series}} series, {{warming}} warming up. scripts/synthetic_fleet.py, scripts/fleet_paths.py</li>
+    </ul>
+  </div>
+</section>
+
+<section class="read" id="read" aria-labelledby="read-h">
+  <div class="prose">
+    <h2 id="read-h">Every series is a train on one clock</h2>
+    <p>Promcast predicts <code class="path">{{name}}</code> crosses in {{lead}}. predict_linear says {{linear}}, {{gap}} later, because it extends the last hour's slope and the disk is not filling in a straight line.</p>
+    <p>Time runs across the sheet and free space runs up it, on a log scale so the last few percent get room. Promcast sends nine quantile paths out of now; predict_linear sends one ruled line. A train stops where it meets the red rule, which marks its predicted crossing.</p>
+    <p><code class="path">{{loss}}</code> is the honest loss: the ruler gets there {{loss_gap}} first. <code class="path">{{spare}}</code> has a linear crossing prediction at {{spare_at}}, while Promcast predicts no crossing.</p>
+    <p class="fine">Runs on your machine. Nothing is uploaded.</p>
+  </div>
+  <div class="log">
+    <h3>In order, as the hand passes</h3>
+    <ol class="events" id="events">{{events_html}}</ol>
+  </div>
+</section>
+
+<section class="states" id="states" aria-labelledby="states-h">
+  <div class="states-head">
+    <h2 id="states-h">One board in your terminal</h2>
+    <div class="tabs" role="tablist" aria-label="Board state"></div>
+  </div>
+  <div class="grid">
+    <figure class="fig state"><div class="wide">{{state_populated}}</div><div class="narrow">{{state_populated_narrow}}</div>
+      <figcaption><b>Populated.</b> Ranked by time left. A diamond with no bar marks a crossing predicted only by predict_linear.</figcaption></figure>
+    <figure class="fig state"><div class="wide">{{state_past}}</div><div class="narrow">{{state_past_narrow}}</div>
+      <figcaption><b>Past threshold.</b> A series already at {{past_free}}&nbsp;% free becomes a solid red lane that says to page now.</figcaption></figure>
+    <figure class="fig state"><div class="wide">{{state_redact}}</div><div class="narrow">{{state_redact_narrow}}</div>
+      <figcaption><b>--redact.</b> Host and mount labels are replaced with aliases.</figcaption></figure>
+    <figure class="fig state"><div class="wide">{{state_warming}}</div><div class="narrow">{{state_warming_narrow}}</div>
+      <figcaption><b>Warming up.</b> Fresh series show a grey lane and the time to their first forecast. No cross, no diamond, no guess.</figcaption></figure>
+  </div>
+  <h3 id="try">On your own series</h3>
+  <dl class="runs">
+    <div><dt><code>uvx --torch-backend cpu promcast scan</code></dt><dd>Ranks every disk, volume and memory series by when it runs out.</dd></div>
+    <div><dt><code>uvx --torch-backend cpu promcast scan --redact</code></dt><dd>Replaces host and mount labels with aliases.</dd></div>
+    <div><dt><code>uvx --torch-backend cpu promcast replay --auto</code></dt><dd>Grades alerts against your own history before you trust them.</dd></div>
+  </dl>
+</section>
+
+<section class="grafana" id="grafana" aria-labelledby="grafana-h">
+  <div class="g-side">
+    <h2 id="grafana-h">And in Grafana</h2>
+    <p>{{grafana_caption}}</p>
+  </div>
+  <figure class="shot">
+    <div class="scroll"><img src="grafana.png" width="1440" height="444" alt="Grafana dashboard: free disk space falls into a chartreuse forecast band that reaches the dashed red full-disk line, with Promcast's minutes to breach beside predict_linear's." decoding="async"></div>
+    <div class="crops" aria-hidden="true"><i class="stats"></i></div>
+  </figure>
+</section>
+</main>
+
+<footer>
+  <div class="foot-cols">
+    <p>Apache-2.0. Type: TikTok Sans and Martian Mono, both SIL Open Font License 1.1, served from this site.</p>
+    <p>The sheet follows Étienne-Jules Marey's graphical timetable for the Paris to Lyon line, {{marey_year}}. Every number on it is read from promcast scan on a synthetic fleet.</p>
+    <p><a href="https://github.com/intesarjawad/promcast">GitHub</a> · <a href="https://github.com/intesarjawad/promcast/tree/main/docs">Docs</a></p>
+  </div>
+</footer>
+
+<script type="application/json" id="sheet-data">{{page_data}}</script>
+<script src="site.js" type="module"></script>
+</body>
+</html>

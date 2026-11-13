@@ -1,0 +1,85 @@
+name: promcast-mimir
+
+services:
+  mimir:
+    image: grafana/mimir:3.2.4
+    command:
+      - -config.file=/etc/mimir/mimir.yaml
+    volumes:
+      - ./mimir-config.yaml:/etc/mimir/mimir.yaml:ro
+      - mimir-data:/data
+    ports:
+      - 127.0.0.1:8080:8080
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+    depends_on:
+      mimir:
+        condition: service_started
+    volumes:
+      - prometheus-data:/prometheus
+    configs:
+      - source: prometheus
+        target: /etc/prometheus/prometheus.yml
+
+  promcast:
+    profiles: [promcast]
+    image: ghcr.io/intesarjawad/promcast:${PROMCAST_VERSION:-0.1.0}
+    command: [serve, --config, /etc/promcast.yaml]
+    depends_on:
+      prometheus:
+        condition: service_started
+    configs:
+      - source: promcast
+        target: /etc/promcast.yaml
+    ports:
+      - 127.0.0.1:8787:8787
+
+configs:
+  prometheus:
+    content: |
+      global:
+        scrape_interval: 5s
+      scrape_configs:
+        - job_name: prometheus
+          static_configs:
+            - targets: ['localhost:9090']
+      remote_write:
+        - url: http://mimir:8080/api/v1/push
+          headers:
+            X-Scope-OrgID: demo
+  promcast:
+    content: |
+      tsdb:
+        url: http://mimir:8080/prometheus
+        headers:
+          X-Scope-OrgID: demo
+      model:
+        name: toto-2.0-22m
+        batch_size: 16
+        cache_dir: /opt/promcast/models
+      server:
+        listen: 0.0.0.0:8787
+      cycle: 1m
+      targets:
+        - name: prometheus_up
+          query: up{job="prometheus"}
+          step: 15s
+          context: 1h
+          horizon: 15m
+          season: 1h
+          direction: below
+          threshold: 0.5
+          quantile: 0.9
+          warn: 5m
+          method: linear
+          linear_window: 15m
+          max_series: 50
+
+volumes:
+  mimir-data:
+  prometheus-data:

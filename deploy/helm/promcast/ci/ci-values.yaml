@@ -1,0 +1,9 @@
+# The cluster has no Prometheus, so no target ever forecasts and /healthz stays
+# unavailable; wait on the port instead. The image is loaded into the cluster
+# beforehand rather than pulled.
+image:
+  pullPolicy: Never
+readinessProbe:
+  httpGet: null
+  tcpSocket:
+    port: http

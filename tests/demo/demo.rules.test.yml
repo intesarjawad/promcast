@@ -1,0 +1,40 @@
+rule_files:
+  - ../../demo/demo.rules.yml
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: demo_disk_free_bytes
+        values: '3600-60x60'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: DemoLinearBreachSoon
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: DemoLinearBreachSoon
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: Synthetic demo disk forecast to fill within one hour by predict_linear
+      - eval_time: 59m
+        alertname: DemoDiskFull
+        exp_alerts: []
+      - eval_time: 60m
+        alertname: DemoDiskFull
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+            exp_annotations:
+              summary: Synthetic demo disk is full
+  - interval: 1m
+    input_series:
+      - series: demo_disk_free_bytes
+        values: '3600+0x60'
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: DemoLinearBreachSoon
+        exp_alerts: []
+      - eval_time: 60m
+        alertname: DemoDiskFull
+        exp_alerts: []

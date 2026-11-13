@@ -1,0 +1,16 @@
+groups:
+  - name: demo
+    rules:
+      - alert: DemoDiskFull
+        expr: demo_disk_free_bytes <= 0
+        labels:
+          severity: critical
+        annotations:
+          summary: Synthetic demo disk is full
+      - alert: DemoLinearBreachSoon
+        expr: predict_linear(demo_disk_free_bytes[1h], 3600) < 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Synthetic demo disk forecast to fill within one hour by predict_linear

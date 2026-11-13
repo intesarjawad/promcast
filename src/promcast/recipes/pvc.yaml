@@ -1,0 +1,12 @@
+name: pvc
+requires:
+- kubelet_volume_stats_available_bytes
+- kubelet_volume_stats_capacity_bytes
+query: kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes
+direction: below
+threshold: 0.05
+unit: ratio
+show:
+- namespace
+- persistentvolumeclaim
+source: https://kubernetes.io/docs/reference/instrumentation/metrics/

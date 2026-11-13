@@ -1,0 +1,62 @@
+[project]
+name = "promcast"
+version = "0.1.0"
+description = "Forecasting for Prometheus metrics"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "toto-models==1.0.0", "torch==2.15.0", "numpy==2.5.4", "augurs==0.10.3",
+  "httpx==0.28.1", "prometheus-client==0.26.0", "fastapi==0.162.3",
+  "uvicorn==0.54.0", "pydantic==2.14.3", "pyyaml==6.0.3", "pyarrow==26.0.1", "rich==15.0.0",
+]
+
+[project.optional-dependencies]
+compare = ["chronos-forecasting==2.3.2"]
+
+[project.scripts]
+promcast = "promcast.shell.cli:main"
+
+[dependency-groups]
+dev = ["pytest==9.2.0", "hypothesis==6.170.15", "respx==0.23.1", "ruff==0.17.4",
+       "pyright==1.1.414", "types-PyYAML==6.0.12.20261103",
+       "pytest-playwright==0.10.0", "playwright==1.65.0"]
+
+[build-system]
+requires = ["uv_build==0.13.7"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E","F","W","I","N","UP","B","A","C4","SIM","PT","RUF","PL","ANN","D","S","DTZ","PTH",
+          "ERA","T20","ARG","RET","PERF","PGH","PIE","NPY"]
+ignore = ["D100","D104","D105","D107","D203","D213","PLR2004"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101","D","ANN","ARG001"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.12"
+reportMissingTypeStubs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Scripts import sibling scripts by name, as they do when run directly.
+pythonpath = ["scripts"]
+addopts = "-q --strict-markers"
+markers = ["slow: needs model weights or network", "browser: drives the Pages site in Chromium"]

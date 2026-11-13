@@ -1,0 +1,54 @@
+target: all
+multitenancy_enabled: true
+
+server:
+  http_listen_port: 8080
+  grpc_listen_port: 9095
+  log_level: warn
+
+common:
+  storage:
+    backend: filesystem
+    filesystem:
+      dir: /data
+
+blocks_storage:
+  storage_prefix: blocks
+  tsdb:
+    dir: /data/tsdb
+  bucket_store:
+    sync_dir: /data/tsdb-sync
+
+compactor:
+  data_dir: /data/compactor
+  sharding_ring:
+    kvstore:
+      store: inmemory
+
+distributor:
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+ingester:
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+    replication_factor: 1
+
+ruler:
+  rule_path: /data/ruler
+  ring:
+    kvstore:
+      store: inmemory
+
+ruler_storage:
+  storage_prefix: ruler
+
+store_gateway:
+  sharding_ring:
+    kvstore:
+      store: inmemory
+    replication_factor: 1

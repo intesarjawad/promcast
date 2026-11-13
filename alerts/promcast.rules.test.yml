@@ -1,0 +1,45 @@
+rule_files:
+  - promcast.rules.yml
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'promcast_breach_timestamp_seconds{target="root_disk_free",method="toto"}'
+        values: '3060+0x10'
+      - series: 'promcast_forecast_origin_timestamp_seconds{target="root_disk_free"}'
+        values: '0+60x10'
+      - series: 'promcast_last_success_timestamp_seconds{target="root_disk_free"}'
+        values: '0+60x10'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: PromcastBreachSoon
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: PromcastBreachSoon
+        exp_alerts:
+          - exp_labels:
+              target: root_disk_free
+              method: toto
+              severity: warning
+            exp_annotations:
+              summary: root_disk_free forecast to breach in 41 min
+              lead_minutes: '41'
+              forecast_origin: '1970-01-01 00:10:00 +0000 UTC'
+              model: toto-2.0-22m
+      - eval_time: 10m
+        alertname: PromcastForecastStale
+        exp_alerts: []
+  - interval: 1m
+    input_series:
+      - series: 'promcast_last_success_timestamp_seconds{target="root_disk_free"}'
+        values: '0+0x12'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: PromcastForecastStale
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: PromcastForecastStale
+        exp_alerts:
+          - exp_labels:
+              target: root_disk_free
+              severity: info

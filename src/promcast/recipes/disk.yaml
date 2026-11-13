@@ -1,0 +1,12 @@
+name: disk
+requires:
+- node_filesystem_avail_bytes
+- node_filesystem_size_bytes
+query: node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|nsfs|devtmpfs|ramfs|autofs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|nsfs|devtmpfs|ramfs|autofs"}
+direction: below
+threshold: 0.05
+unit: ratio
+show:
+- instance
+- mountpoint
+source: https://github.com/prometheus/node_exporter/blob/master/collector/filesystem_common.go

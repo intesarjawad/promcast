@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 30s
+
+scrape_configs:
+  - job_name: node
+    static_configs:
+      - targets: ["127.0.0.1:9100"]
+        labels:
+          os: linux
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/*.json
+        refresh_interval: 30s

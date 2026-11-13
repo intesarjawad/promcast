@@ -1,0 +1,15 @@
+ PROMCAST   localhost:9090 · no series
+
+Nothing to rank yet
+No recipe metrics matched: disk, memory,
+prometheus-self, prometheus-tsdb, pvc,
+windows-disk
+
+now   1h     2h     3h     4h     5h     6h
+┼┈┈┈┈┈┈┼┈┈┈┈┈┈┼┈┈┈┈┈┈┼┈┈┈┈┈┈┼┈┈┈┈┈┈┼┈┈┈┈┈┈┼
+░░░░░░░░░  no series to forecast
+
+next docker compose -f oci://ghcr.io/intesar
+jawad/promcast-demo:0.1.0 up
+next promcast scan --query '<PromQL>'
+--below <threshold>
