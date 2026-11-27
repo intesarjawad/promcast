@@ -6,9 +6,9 @@ readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-  "toto-models==1.0.0", "torch==2.15.0", "numpy==2.5.4", "augurs==0.10.3",
-  "httpx==0.28.1", "prometheus-client==0.26.0", "fastapi==0.162.4",
-  "uvicorn==0.54.0", "pydantic==2.14.3", "pyyaml==6.0.3", "pyarrow==26.0.1", "rich==15.0.0",
+  "toto-models==1.0.0", "torch==2.15.0", "numpy==2.5.5", "augurs==0.10.3",
+  "httpx==0.28.1", "prometheus-client==0.26.0", "fastapi==0.165.0",
+  "uvicorn==0.54.0", "pydantic==2.14.4", "pyyaml==6.0.4", "pyarrow==26.0.1", "rich==15.0.0",
 ]
 
 [project.optional-dependencies]
@@ -18,12 +18,12 @@ compare = ["chronos-forecasting==2.3.2"]
 promcast = "promcast.shell.cli:main"
 
 [dependency-groups]
-dev = ["pytest==9.2.0", "hypothesis==6.170.15", "respx==0.23.1", "ruff==0.17.4",
+dev = ["pytest==9.2.0", "hypothesis==6.170.17", "respx==0.23.1", "ruff==0.17.6",
        "pyright==1.1.414", "types-PyYAML==6.0.12.20261103",
-       "pytest-playwright==0.10.0", "playwright==1.65.0"]
+       "pytest-playwright==0.10.0", "playwright==1.65.2"]
 
 [build-system]
-requires = ["uv_build==0.13.7"]
+requires = ["uv_build==0.13.9"]
 build-backend = "uv_build"
 
 [tool.uv.sources]
